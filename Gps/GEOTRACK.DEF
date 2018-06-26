@@ -1,0 +1,173 @@
+'******************************************************************************
+'	geotrack.def
+'
+'	Definitions file for geotrack.mbx - the Geographic Tracker link to MapInfo 
+'
+'	Copyright (c) Blue Marble Geographics, Inc. All Rights Reserved
+'
+'  This source code is supplied without warranty and is intended as
+'  sample source code for enabling the use of GPS from within MapInfo.
+'*******************************************************************************
+
+'----------------------- Global Sub Definitions
+
+'------Tracker2.mb
+'none
+
+'------Trkmisc.mb
+Declare Sub dPrint(Byval msg As String)		'if bDebug is set to TRUE then print to message box
+Declare Sub InitApp					'sets misc. variables at start up
+Declare Sub ChkMapWindows				'checks for open map windows 
+Declare Sub ValidateWindow				'sets new tracking window on error	
+Declare Sub CreateAnimateLayer			'sets up the Animate Layer
+Declare Sub ReInitPLine					'reinits the tracking polyline
+Declare Sub ReInitPoint					'reinits the tracking point
+
+Declare Sub GPSOff					'set tracker to off mode
+Declare Sub GPSLive					'set tracker to live mode
+Declare Sub GPSSimulation				'set tracker to play simulation file
+Declare Sub ProcessUpdate				'process UPDATE message from RemoteMsgHandler
+Declare Sub Recenter					'recenter mapper to current GPS position update
+Declare Function TestMapExtents As Logical	'test GPS position update against mapper's extents
+Declare Sub StartGeotrack				'initiates the Geographic Tracker
+Declare Sub EndGeotrack					'ends the Geographic Tracker
+Declare Sub TerminateMBX				'terminate handler -ends mbx
+Declare Sub SetGPSMapWindow				'sets the tracking window if more than one
+
+'-----TrkUI.mb
+Declare Sub MainMenu					'sets up the main application menu
+Declare Sub GeoCodeButton				'creates custom button pad w/ geocode buttons
+Declare Sub PLGCode					'handler for polyline geocoding
+Declare Sub AboutBox					'displays about box 
+Declare Sub PauseGPSSimulation			'handler for pause/forward
+Declare Sub GPSPauseUI					'update UI for Pause 
+Declare Sub GPSForwardUI				'update UI for Forward
+Declare Sub StartHelp					'initiates win help, open help file
+
+'-----TrkDlg.mb
+Declare Sub TrackingDLG					'sets up tracking dialog
+
+'-----GCDlg.mb
+Declare Sub GeoCodingDLG				'sets up geocoding dialog
+
+'---GCode.mb
+Declare Sub SymGeocode					'geocode point symbol 
+Declare Sub StartPLnGeocode				'initiate polyline geocoding
+Declare Sub UpdatePLnGeocode				'add node to geocoding polyline
+Declare Sub EndPLnGeocode				'end polyline geocoding
+
+'---------------------------User Interface Controls constants
+' MN -menu, PU -popup list, RG - radio group, SP - symbol picker, 
+' PP - polyline picker, CB - check box, 
+' ET - edit text, PB - push button 
+
+'GPS menu items
+Define UI_MN_GPSOFF  		100
+Define UI_MN_GPSLIVE  		101
+Define UI_MN_GPSSIMULATION	102 	
+Define UI_MN_SETUPTRACK  	103
+
+Define UI_MN_RECENTER  		104
+Define UI_MN_SETUPGEOCODE  	105
+Define UI_MN_POINTGEOCODE  	106
+Define UI_MN_POLYGEOCODE  	107
+Define UI_MN_TERMINATE		108
+Define UI_MN_ABOUT		109
+Define UI_MN_HELP  		110
+
+'tracking dialog items
+Define UI_PU_TRACKINGWINDOW 	200
+Define UI_RG_TRACKTYPE		201
+Define UI_SP_TRACKSYMBOL  	202
+Define UI_PP_TRACKPEN		203
+Define UI_CB_DISTANCE  		204
+Define UI_ET_DISTANCETOL  	205
+
+'geocode dialog items
+Define UI_PU_GCTABLE  		300
+Define UI_PU_LAT  		301
+Define UI_PU_LON  		302
+Define UI_PU_ELEV  		303
+Define UI_PU_GPSTIME  		304
+Define UI_PU_SPEED		305
+Define UI_PU_HEADING  		306
+Define UI_PU_PDOP  		307
+
+'GPS button pad
+Define UI_PB_PAUSEGPS		401
+Define UI_PB_POINTGEOCODE  	402
+Define UI_PB_POLYGEOCODE  	403
+
+'--------misc constants
+
+Define PLINE_MAXPTS		15000 		'max number of nodes a polyline in tracking or geocoding can contain
+
+'------------------------misc variables
+Global bDebug as Logical			' to show/hide Print statements
+Global g_bGPSPause as Logical 		' state of the log file (true - paused, false - running)
+
+'------------------------geocoding variables
+
+Global g_gcSelTblIndex As Integer		'table to geocode into (index)
+Global g_gcSelTblName As String		'table to geocode into (name)
+
+Global g_bPLnGeocode As Logical		'toggle for Polyline geocoding
+
+Global g_iLat As Integer			'list indices for popup menus in 
+Global g_iLon As Integer			'	geocoding dialog GPS items
+Global g_iGPSTime As Integer
+Global g_iElev As Integer
+Global g_iHeading As Integer
+Global g_iSpeed As Integer
+Global g_iPDOP As Integer
+
+'Global g_iVersion As Integer			'not implemented
+Global g_fLat As Float				'current (last read) values for the 
+Global g_fLon As Float				'	GPS items
+Global g_fGPSTime As Float
+Global g_fGeoidElev As Float
+'Global g_fElipElev As Float			'not implemented
+Global g_fHeading As Float
+Global g_fSpeed As Float
+Global g_fPDOP As Float
+
+Global g_gcSymbol As Symbol			'geocode symbol style
+Global g_gcPen As Pen				'geocode pen style
+
+Global g_gcPLine As Object			'geocode pline object
+
+Global g_puColList As String			'geocode table column list for popup menus
+
+'--------------------------tracking variables
+
+Global msg As String				'RemoteMsgHandler raw message
+
+Global Halt As Integer				'track/don't track toggle varible
+Global bRecenter As Logical 			'recenter flag for GPS outside map view
+Global bExiting As Logical
+
+Global bHoldOff As Logical			'track but holdoff update 
+
+Global g_trkSelWndIndex As Integer		'window to track into (popup index)
+Global g_trkSelWndID As Integer			'window to track into (winID)
+
+Global g_sMappable As String			'string of open Map Window names
+
+Global GPSPoint As Object			'graphic objects for GPS tracking
+Global GPSPLine As Object
+
+Global g_tkSymbol As Symbol			'tracking symbol style
+Global g_tkPen As Pen				'tracking pen style
+
+Global g_nNodes As integer			'number of polyline nodes
+
+Global g_NullSymbol As Symbol			'invisible symbol style
+Global g_NullPen As Pen				'invisible pen style
+
+Global g_iTrack As Integer			'selected tracking mode 1-point 2-pline
+
+Global g_bDist As Logical			'distance tolerance for tracking on/off
+Global g_sTolDist As String			'distance tolerance value
+Global g_sDistUnits As String			'units of distance tolerance
+
+Global g_WinIdList() as integer		'array of window id's

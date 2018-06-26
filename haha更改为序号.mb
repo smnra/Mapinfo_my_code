@@ -1,0 +1,167 @@
+include"mapbasic.def"
+include"menu.def"
+include"Icons.def"
+Declare Sub Main
+Declare Sub col_1_name
+Declare Sub button_sub1
+Declare Sub button_sub2
+Declare Sub button_sub3
+dim col1_name as alias					'定义别名变量  第二列的名称
+dim col6_name as alias					'定义别名变量  第三列的名称	
+Global max_rows As Integer				'定义表的最大行数
+
+Sub Main
+
+	Create ButtonPad "序号"  As
+
+	PushButton
+	  Icon 104
+		  Calling button_sub1
+	  HelpMsg "更新 DT问题点图层 的 地市,序号,问题点编号,归属网格,场景,问题点经纬度,网格类型 列"
+
+
+	PushButton
+	  Icon 105
+		  Calling button_sub2
+	  HelpMsg "更新 圈选图层 的 各列"
+
+	PushButton
+	  Icon 106
+		  Calling button_sub3
+	  HelpMsg "更新 解决方案图层的各列"
+
+
+
+
+
+	Title "宝鸡三滚图层更新" 
+	ToolbarPosition(0,1)
+	Width 10
+	Show
+
+End Sub
+
+
+Sub col_1_name()
+	col1_name = ColumnInfo(Selection,"col1",COL_INFO_NAME)				'把选择区域  第二列的列名  赋值给 别名变量  col1_name    为自动识别第二列的列名
+	col6_name = ColumnInfo(Selection,"col6",COL_INFO_NAME)				'把选择区域  第三列的列名  赋值给 别名变量  col6_name    为自动识别第三列的列名
+	Select col1_name,col6_name from Selection into temp_table    		 '把第二列 第三列 写入 temp_table  表中
+	
+end sub
+	
+
+
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''	
+Sub button_sub1							'此sub为更新DT问题点图层各列
+	onerror goto error_trap
+	call col_1_name()	
+	max_rows = TableInfo(temp_table, TAB_INFO_NROWS)			'获得当前打开第表的总行数
+	
+	Add Column "DT问题点图层" (场景 )From 宝鸡_行政区划分 Set To NAME Where contains 	'更新 DT问题点图层 的"场景"列
+	Add Column "DT问题点图层" (归属子场景 )From 宝鸡_行政区划分 Set To NAME Where contains 	'更新 DT问题点图层 的"场景"列
+	dim i as integer	
+		for i=1 to max_rows Step 1								'更新 DT问题点图层 的"序号"列 为"问题点编号" 列
+  			fetch rec i from temp_table
+
+			Update temp_table Set col1_name  = i Where RowID = i			'修改表的col1_name列值为i  当行号为i时
+			if i<10 then
+				Update temp_table Set col6_name  = "BJ-W-00" +i Where RowID = i		'修改表的col1_name列值为i  当行号为i时
+			ElseIf i<100 then 	
+					Update temp_table Set col6_name  = "BJ-W-0" +i Where RowID = i			'修改表的col1_name列值为i  当行号为i时
+			ElseIf i>=100 then 	
+					Update temp_table Set col6_name  = "BJ-W-" +i Where RowID = i			'修改表的col1_name列值为i  当行号为i时 
+			end if	
+
+			if DT问题点图层.场景 = "宝鸡市" then							'更新 DT问题点图层 的"场景"列 的值为 "市区"  和 "县城"
+																			'更新 DT问题点图层 的"归属子场景"列 的值为 "市区"  和 县城的名字
+				Update DT问题点图层 Set 场景  = "市区" Where RowID = i
+				Update DT问题点图层 Set 归属子场景  = "市区" Where RowID = i
+			else
+				Update DT问题点图层 Set 场景  = "县城" Where RowID = i
+			end if
+						
+			print i
+		next 
+		
+	Update DT问题点图层 Set 地市 = "宝鸡"												'更新 DT问题点图层 的"地市"列 为"宝鸡"
+	Add Column "DT问题点图层" (归属网格 )From 物理网格_宝鸡 Set To 网格编号 Where contains		'更新 DT问题点图层 的"归属网格"列 
+	'Add Column "DT问题点图层" (场景 )From 物理网格_宝鸡 Set To 主覆盖场景 Where contains		'更新 DT问题点图层 的"场景"列 		此条已废除
+	Update DT问题点图层 Set 经度  = Round(CentroidX(obj),0.00001)							'更新 DT问题点图层 的"经度"列 
+	Update DT问题点图层 Set 纬度  = Round(CentroidY(obj),0.00001)							'更新 DT问题点图层 的"纬度"列 
+	Add Column "DT问题点图层" (网格类型 )From 物理网格_宝鸡 Set To 网格类型 Where contains		'更新 DT问题点图层 的"网格类型"列
+
+		
+	done: 
+	  exit sub 
+	error_trap: 
+	   print(error$())
+	   resume done 
+end sub
+'''''''''''''''''''''''''''''''''''''''''''''''''
+
+
+
+
+
+
+''''''''''''''''''''''''''''''''''''
+Sub button_sub2					'此sub为更新圈选图层
+	onerror goto error_trap
+
+	Add Column "圈选图层" (序号 )From DT问题点图层 Set To 序号 Where within		'更新圈选图层的序号
+	Update 圈选图层 Set 面积 = Area(obj, "sq m")									'更新圈选图层 面积 列
+	Add Column "圈选图层" (问题点名称 )From DT问题点图层 Set To 问题点名称 Where within		'更新圈选图层 问题点名称 列
+	Add Column "圈选图层" (归属场景 )From DT问题点图层 Set To 场景 Where within			'更新圈选图层 归属场景 列
+	Add Column "圈选图层" (解决方案 )From DT问题点图层 Set To 解决方案 Where within			'更新圈选图层 解决方案 列
+
+
+	Add Column "圈选图层" (MR弱覆盖 )From MR图层 Set To Count(*) Where within			'更新圈选图层 "MR弱覆盖" 列
+	Add Column "圈选图层" (DT )From DT问题点图层 Set To Count(*) Where within					'更新圈选图层 "投诉" 列
+	Add Column "圈选图层" (投诉 )From 投诉图层 Set To Count(*) Where within					'更新圈选图层 "投诉" 列
+	'Add Column "圈选图层" (CQT )From CQT问题点图层 Set To Count(*) Where within					'更新圈选图层 "CQT" 列
+	Add Column "圈选图层" (网优解决数量 )From 解决方案图层 Set To 解决方案 = "网优解决" Where within 				'更新圈选图层 "网优解决数量" 列
+	Add Column "圈选图层" (新建宏站数量 )From 解决方案图层 Set To 解决方案 = "新建宏站" Where within			'更新圈选图层 "新建宏站数量" 列
+
+	
+	
+	
+	Add Column "DT问题点图层" (MR弱覆盖 )From 圈选图层 Set To MR弱覆盖 Where contains			'更新DT问题点图层 "MR弱覆盖" 列
+	Add Column "DT问题点图层" (DT )From 圈选图层 Set To DT Where contains						'更新DT问题点图层 "DT" 列
+	Add Column "DT问题点图层" (投诉 )From 圈选图层 Set To 投诉 Where contains					'更新DT问题点图层 "投诉" 列
+	Add Column "DT问题点图层" (CQT )From 圈选图层 Set To CQT Where contains							'更新DT问题点图层 "CQT" 列
+	Add Column "DT问题点图层" (网优解决数量 )From 圈选图层 Set To 网优解决数量 Where contains			'更新DT问题点图层 "网优解决数量" 列	
+	Add Column "DT问题点图层" (新建宏站数量 )From 圈选图层 Set To 新建宏站数量 Where contains			'更新DT问题点图层 "新建宏站数量" 列
+	
+	done: 
+	  exit sub 
+	error_trap: 
+	   print(error$())
+	   resume done 
+end sub
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub button_sub3				'此sub为更新解决方案图层 各列
+	onerror goto error_trap
+
+	Add Column "解决方案图层" (序号 )From 圈选图层 Set To 序号 Where contains		'更新解决方案图层的序号
+	Add Column "解决方案图层" (问题点名称_编号 )From 圈选图层 Set To 问题点名称 Where contains			'更新解决方案图层的 问题点名称_编号列
+	Update 解决方案图层 Set 经度 = Round(CentroidX(obj),0.00001)								'更新 解决方案图层 的"经度"列 
+	Update 解决方案图层 Set 纬度 = Round(CentroidY(obj),0.00001)								'更新 解决方案图层 的"纬度"列 
+	Add Column "解决方案图层" (解决方案 )From 圈选图层 Set To 解决方案 Where contains		'更新解决方案图层的 解决方案 列 
+
+
+
+
+
+
+
+	done: 
+	  exit sub 
+	error_trap: 
+	   print(error$())
+	   resume done 
+end sub

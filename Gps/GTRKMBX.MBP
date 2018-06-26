@@ -1,0 +1,8 @@
+[LINK]
+Application=geotrack.mbx
+Module=tracker2.mbo
+Module=gcodedlg.mbo
+Module=trkdlg.mbo
+Module=trkui.mbo
+Module=trkmisc.mbo
+Module=gcode.mbo

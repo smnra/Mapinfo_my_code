@@ -1,0 +1,240 @@
+include"mapbasic.def"
+include"menu.def"
+include"Icons.def"
+
+Declare Function find_ColName(ByVal my_TabName as string) as String
+Declare sub myTab_Info
+Declare Sub button_sub
+Declare Sub button_sub1
+Declare Sub Main
+
+
+Global s_filename As String				'定义要打开的文件名
+Global s_tab As String					'定义要打开的表的别名
+Global my_rscp As Float				'定义
+Global max_rows As Integer				'定义表的最大行数
+Global my_object As Object				'定义图形对象
+dim my_NumCols As Integer				'定义打开的表的列数
+dim my_ColName As String				'定义打开的表的列名
+dim my_ColType As Integer				'定义打开的表的列的数据类型
+dim	my_TabNums As Integer				'定义已打开的表的个数
+dim my_TabNum As Integer				'定义已打开的表的序号
+dim my_TabNames As String				'定义查询已打开的表的名字
+dim my_TabFilePath As String			'定义已打开的表的文件路径
+
+dim array_TabName(255) as String						'定义查询已打开的表的名字集合数组
+dim array_ColName(255)	as String					'定义查询已打开的表的列名字集合数组
+dim array_ColType(255)	as Integer				'定义查询已打开的表的列的数据类型
+dim array_FilePath(255) as String					'定义查询已打开的表的列的数据类型
+
+
+
+
+ 
+Sub Main 
+Create ButtonPad "改"  As
+
+PushButton
+  Icon MI_ICON_RULER
+      Calling button_sub
+  HelpMsg "改"
+
+PushButton
+  Icon MI_ICON_ZOOM_QUESTION
+      Calling button_sub1
+  HelpMsg "Display the query dialog"
+
+PushButton
+  Icon MI_ICON_RULER
+      Calling myTab_Info
+  HelpMsg "所有表和列查询"
+
+
+Title "修改颜色" 
+ToolbarPosition(0,1)
+Width 2
+Show
+End Sub
+
+
+Sub button_sub
+    
+	s_filename=FileOpenDlg("","","TAB","Open Table")		'文件选择对话框
+	print(s_filename)
+	Open Table s_filename  as my_tab Interactive				'打开tab文件
+	s_tab = TableInfo(0, TAB_INFO_NAME)			'获得当前打开表的名称
+	max_rows = TableInfo(0, TAB_INFO_NROWS)			'获得当前打开第一个表的总行数
+	my_TabNums = NumTables()			'获得当前打开表的总个数
+	print(my_TabNums)
+	'my_TabNum = TableInfo(0, TAB_INFO_NUM)			'获得当前打开表的序号数
+	my_TabNames = TableInfo(0,TAB_INFO_NAME)			'获得当前打开第一个表的名字
+	print(my_TabNames)
+	'my_TabFilePath = TableInfo(0,TAB_INFO_TABFILE)			'获得当前打开第一个表的文件路径
+
+	'my_NumCols=NumCols(my_tab)					'获得当前打开表的列数数
+	'my_ColName = ColumnInfo(my_tab,"col1",COL_INFO_NAME)			'获取my_tab表的第一列的名称
+	'my_ColType = ColumnInfo(my_tab,"col1",COL_INFO_TYPE)			'获取my_tab表的第一列的数据类型
+	
+	'Browse * From my_tab						'浏览表哥
+	
+	if TableInfo(0,TAB_INFO_MAPPABLE) then				'判断表格是否可以在地图上显示
+		Map From my_tab						'地图查看
+	else 
+		note "地图不可查看!"
+	end if
+	
+	print("表名：" + s_tab + "行数：" + max_rows)
+End sub
+
+
+Sub button_sub1
+	'Fetch First From TableInfo(my_tab, TAB_INFO_NAME)		'定位第一行为当前行
+	's_name =my_tab.CoL1
+	'print( s_name)
+	dim my_color as integer
+	dim s_name as float
+	dim i,n as integer
+
+	for i=1 to max_rows Step 1
+ 		fetch rec i from my_tab
+		my_object = my_tab.obj
+		my_color = StyleAttr(ObjectInfo(my_object, 2),2)	'当前行对应的对象的颜色值
+
+		s_name = my_tab.col(1)							'当前行对应的第一列的值
+		'print(s_name)									
+
+		'print(my_color)							
+		do case my_color
+			case 65280
+				if (s_name < -10 and s_name >= -80) then
+					print("第" + i + "行RSCP值为："+ s_name + "dBm。颜色值为：" + my_color + "为绿色，RSCP值__正确__")
+				else
+					print("第" + i + "行RSCP值为："+ s_name + "dBm。颜色值为：" + my_color + "为绿色，RSCP值__错误!!!!!!")
+					Update my_tab Set Total_RSCP  = Round(0-(65 + 15 * Rnd (1)),0.01) where rowid = i
+				end if
+
+			case 65535
+				if  (s_name < 80 and s_name >= -85)  then
+					print("第" + i + "行RSCP值为："+ s_name + "dBm。颜色值为：" + my_color + "为蓝色，RSCP值__正确__")
+				else
+					print("第" + i + "行RSCP值为："+ s_name + "dBm。颜色值为：" + my_color + "为蓝色，RSCP值__错误!!!!!!")
+					Update my_tab Set Total_RSCP  = Round(0-(80 + 5 * Rnd (1)),0.01) where rowid = i
+				end if
+
+			case 16776960
+				if (s_name < -85 and s_name >= -90)  then
+					print("第" + i + "行RSCP值为："+ s_name + "dBm。颜色值为：" + my_color + "为黄色，RSCP值__正确__")
+				else
+					print("第" + i + "行RSCP值为："+ s_name + "dBm。颜色值为：" + my_color + "为黄色，RSCP值__错误!!!!!!")
+					Update my_tab Set Total_RSCP  = Round(0-(85 + 5 * Rnd (1)),0.01) where rowid = i
+				end if
+
+			case 16711935
+				if (s_name < -90 and s_name >= -95)  then
+					print("第" + i + "行RSCP值为："+ s_name + "dBm。颜色值为：" + my_color + "为紫色，RSCP值__正确__")
+				else
+					print("第" + i + "行RSCP值为："+ s_name + "dBm。颜色值为：" + my_color + "为紫色，RSCP值__错误!!!!!!")
+					Update my_tab Set Total_RSCP  = Round(0-(90 + 5 * Rnd (1)),0.01) where rowid = i
+				end if
+
+			case 16711680
+				if (s_name < -95 and s_name >= -100)  then
+					print("第" + i + "行RSCP值为："+ s_name + "dBm。颜色值为：" + my_color + "为红色，RSCP值__正确__")
+				else
+					print("第" + i + "行RSCP值为："+ s_name + "dBm。颜色值为：" + my_color + "为红色，RSCP值__错误!!!!!!")
+					Update my_tab Set Total_RSCP  = Round(0-(95 + 5 * Rnd (1)),0.01) where rowid = i
+				end if
+
+			case 0
+				if (s_name <= -100)  then
+					print("第" + i + "行RSCP值为："+ s_name + "dBm。颜色值为：" + my_color + "为黑色，RSCP值__正确__")
+				else
+					print("第" + i + "行RSCP值为："+ s_name + "dBm。颜色值为：" + my_color + "为黑色，RSCP值__错误!!!!!!")
+					Update my_tab Set Total_RSCP  = Round(0-(103 + 10 * Rnd (1)),0.01) where rowid = i
+				end if
+
+			case Else
+				print(my_color + "颜色值不在统计范围内！")
+		end case
+	next 
+End sub
+
+
+
+Sub myTab_Info
+	dim i as Integer
+	dim j as Integer
+	dim k as Integer
+	dim l as Integer
+	dim my_TempTabName as string
+	dim my_TempColName as string
+ 	'my_TabNum = TableInfo(0, TAB_INFO_NUM)			'获得当前打开表的序号数
+	'my_TabNames = TableInfo(0,TAB_INFO_NAME)			'获得当前打开第一个表的名字
+	'my_TabFilePath = TableInfo(0,TAB_INFO_TABFILE)			'获得当前打开第一个表的文件路径
+
+	'my_NumCols=NumCols(my_tab)					'获得当前打开表的列数数
+	'my_ColName = ColumnInfo(my_tab,"col1",COL_INFO_NAME)			'获取my_tab表的第一列的名称
+	'my_ColType = ColumnInfo(my_tab,"col1",COL_INFO_TYPE)			'获取my_tab表的第一列的数据类型
+	'Browse * From my_tab						'浏览表哥
+
+	my_TabNums = NumTables()			'获得当前打开表的总个数
+
+for i = 1 to my_TabNums
+	my_TabNames = TableInfo(i,TAB_INFO_NAME)
+	array_TabName(i) = my_TabNames
+	my_NumCols=NumCols(array_TabName(i))					'获得当前打开表的列数数
+	my_TabFilePath = TableInfo(i,TAB_INFO_TABFILE)
+	array_FilePath(i) = my_TabFilePath
+	print i + "----" + array_TabName(i)
+	for j = 1 to my_NumCols
+		my_ColName = ColumnInfo(array_TabName(i),"col" + j,COL_INFO_NAME)			'获取第i个表的第i列的名称
+		array_ColName(j) = my_ColName										'存入数组
+		my_ColType = ColumnInfo(array_TabName(i),"col" + j,COL_INFO_TYPE)			'获取第i个表的第几列的数据类型
+		array_ColType(j) = my_ColType
+		print j + "----" + array_ColName(j)
+	next 
+
+next
+
+
+
+
+
+
+Dialog
+Control PopupMenu 
+	Title From Variable array_TabName
+	Value 1
+	ID 1 
+	Into my_TempTabName
+ 
+
+Control PopupMenu
+
+	Title From Variable   array_ColName
+	Value 1
+	ID 1 
+	Into my_TempTabName
+	Position 10, 30
+
+
+Control OkButton
+Control CancelButton 
+
+End Sub
+
+
+
+function find_ColName(ByVal my_TabName as string) as String
+	dim j as Integer
+	dim array_ColName_temp(255) as String
+	dim array_ColType_temp(255) as Integer
+	dim my_NumCols_temp as Integer
+	my_NumCols_temp = NumCols(my_TabName)					'获得当前打开表的列数数
+	for j = 1 to my_NumCols_temp
+		array_ColName_temp(j) = ColumnInfo(my_TempTabName,"col" + j,COL_INFO_NAME)			'获取第i个表的第i列的名称
+		array_ColType_temp(j) = ColumnInfo(my_TempTabName,"col" + j,COL_INFO_TYPE)			'获取第i个表的第几列的数据类型
+		print j + "----" + array_ColName_temp(j)
+	next 
+	find_ColName = array_ColName_temp
+end Function

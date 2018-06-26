@@ -1,0 +1,355 @@
+'**************************************************************************
+'  gcodedlg.mb 
+'
+'	Module to display and handle geocode settings dialog box 
+'
+'	Created:	23 Jun 1995 
+'
+'	Copyright (c) 1995 Blue Marble Geographics, Inc. All Rights Reserved.
+'
+'  This source code is supplied without warranty and is intended as
+'  sample source code for enabling the use of GPS from within MapInfo.
+'**************************************************************************
+
+Include "mapbasic.def"
+Include "geotrack.def"
+
+Declare Sub InitGCDlg							'init dialog box controls
+Declare Sub GetColList(byval tblname as String)	'construct column list of selected table
+Declare Sub UpdatePopups						'update popup menus with selected tables column list
+Declare Function FindFirstValidTable as Integer	'determines the first mappable, editable table index
+Declare Sub OKHandler							'save settings on user OK
+Declare Sub CancelHandler						'discard settings
+Declare Sub CheckColType						'check for valid column type of selected column
+
+Dim tcount as Integer	
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'GeoCodingDLG -- create Geocode setup dialog
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub GeoCodingDLG 
+
+	Dim tbl_list As String							'list of available tables
+	Dim i As Integer								'counter
+	Dim ntables As Integer							'number of available tables
+
+	OnError Goto GCDlgError
+
+	tbl_list = ""
+	ntables = NumTables()
+	If ntables <> 0 Then
+		For i = 1 To ntables 
+			tbl_list = tbl_list + TableInfo(i, TAB_INFO_NAME)+ ";"
+		Next
+	Else 
+		Note "No tables open. Geocoding requires a write enabled, mappable table must be open. Please open a write enabled, mappable table to proceed."
+		Exit Sub
+	End If
+
+	If FindFirstValidTable()= 0 Then
+		Note "No write enabled, mappable tables open. Please open a write enabled, mappable table to proceed."
+		Exit Sub
+	End If
+
+	Dialog 
+		Title "Setup GPS GeoCoding" 
+		Height 195 Width 170 Position 10,10
+		Calling InitGCDlg
+
+'--------------------------------------------------
+		Control GroupBox		
+			Title "GPS GeoCode Table"
+			Position 12,5
+			Height 35 Width 153
+
+		Control PopupMenu
+			Position 25,20 Width 75
+			ID UI_PU_GCTABLE
+			Value g_gcSelTblIndex
+			Into g_gcSelTblIndex
+			Calling UpdatePopups
+			Title tbl_list
+			
+		Control SymbolPicker
+			Position 110, 15 
+			Value g_gcSymbol
+			Into g_gcSymbol
+
+		Control PenPicker
+			Position 140, 15 
+			Value g_gcPen
+			Into g_gcPen
+'-------------------------------------------------
+
+		Control	GroupBox
+			Title "Field Assignment"
+			Position 12, 50
+			Height 120 Width 153
+'---Lat
+		Control StaticText 		
+			Position 30,65
+			Title "Latitude:" 
+		
+		Control PopupMenu
+			Position 75,62 Width 70
+			ID UI_PU_LAT
+			Value g_iLat
+			Into g_iLat
+			Calling CheckColType
+			Title g_puColList
+'---Lon
+		Control StaticText 		
+			Position 30, 80
+			Title "Longitude:"
+
+		Control PopupMenu
+			Position 75,77 Width 70
+			ID UI_PU_LON
+			Value g_iLon
+			Into g_iLon
+			Calling CheckColType
+			Title g_puColList 
+'---Elev
+		Control StaticText 		
+			Position 30, 95
+			Title "Elevation:" 
+		
+		Control PopupMenu
+			Position 75,92 Width 70
+			ID UI_PU_ELEV
+			Value g_iElev
+			Into g_iElev
+			Calling CheckColType
+			Title g_puColList 
+'---Time
+		Control StaticText 		
+			Position 30, 110
+			Title "Time:" 
+
+		Control PopupMenu
+			Position 75,107 Width 70
+			ID UI_PU_GPSTIME
+			Value g_iGPSTime
+			Into g_iGPSTime
+			Calling CheckColType
+			Title g_puColList 
+'---Speed
+		Control StaticText 		
+			Position 30, 125
+			Title "Speed:" 
+
+		Control PopupMenu
+			Position 75,122 Width 70
+			ID UI_PU_SPEED
+			Value g_iSpeed
+			Into g_iSpeed
+			Calling CheckColType
+			Title g_puColList 
+'---Heading
+		Control StaticText 		
+			Position 30, 140
+			Title "Heading:" 
+
+		Control PopupMenu
+			Position 75,137 Width 70
+			ID UI_PU_HEADING
+			Value g_iHeading
+			Into g_iHeading
+			Calling CheckColType
+			Title g_puColList 
+'---PDOP
+		Control StaticText 		
+			Position 30, 155
+			Title "PDOP:" 
+
+		Control PopupMenu
+			Position 75,152 Width 70
+			ID UI_PU_PDOP
+			Value g_iPDOP
+			Into g_iPDOP
+			Calling CheckColType
+			Title g_puColList 
+'---
+		Control OKButton
+			Calling OKHandler
+			Position 45, 175
+
+		Control CancelButton
+			Calling CancelHandler
+			Position 85, 175
+
+Exit Sub
+
+GCDlgError:
+	g_gcSelTblIndex = 1 
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+' InitGCDlg - check and set initial values in the popup menus etc.
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub InitGCDlg
+
+	Dim ntables, i, found As Integer
+
+	g_gcSelTblIndex = 0
+
+	ntables = NumTables()
+	If ntables <> 0 Then
+		For i = 1 To ntables
+			If StringCompare(TableInfo(i, TAB_INFO_NAME), g_gcSelTblName) = 0 Then
+				g_gcSelTblIndex = i
+			End If 
+		Next
+	End If
+
+	If g_gcSelTblIndex = 0 Then 
+		g_gcSelTblIndex = FindFirstValidTable()
+	End If
+
+	Alter Control UI_PU_GCTABLE
+		Value g_gcSelTblIndex 
+
+'	Call GetColList(TableInfo(g_gcSelTblIndex, TAB_INFO_NAME))
+
+	Call UpdatePopups
+
+	Alter Control UI_PU_LAT
+		Value g_iLat
+	Alter Control UI_PU_LON
+		Value g_iLon
+	Alter Control UI_PU_ELEV
+		Value g_iElev
+	Alter Control UI_PU_GPSTIME
+		Value g_iGPSTime
+	Alter Control UI_PU_SPEED
+		Value g_iSpeed
+	Alter Control UI_PU_HEADING
+		Value g_iHeading
+	Alter Control UI_PU_PDOP
+		Value g_iPDOP
+
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'CheckColType -- checks the selected column type for float or char 
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub CheckColType
+
+	Dim coltype As Integer
+
+	If ReadControlValue(TriggerControl()) <> 1 Then
+		coltype = ColumnInfo(ReadControlValue(UI_PU_GCTABLE), "COL"+ str$(ReadControlValue(TriggerControl())-1), COL_INFO_TYPE)
+		If coltype = COL_TYPE_CHAR OR coltype = COL_TYPE_FLOAT Then	
+		Else
+			Note "Selected column not of a valid type for GPS Geocode input." + Chr$(10) + "Please select a column of type CHAR or FLOAT."
+			Alter Control TriggerControl()
+				Value 1
+		End If
+	End If
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'GetColList -- create col list for popup title with "-None-" in pos 1
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub GetColList(Byval tblname As String)
+
+	Dim i,num_cols As Integer
+	Dim tnum As Integer
+
+	tnum= TableInfo(tblname, TAB_INFO_NUM)
+	num_cols = NumCols(tblname)
+	If num_cols <> 0 Then
+		g_puColList = "-None-;"
+		For i = 1 To num_cols
+			g_puColList = g_puColList + ColumnInfo(tnum, "COL"+i, COL_INFO_NAME)+ ";"
+		Next		
+	Else
+		Note "No columns in table."	
+		Exit Sub
+	End If
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'UpdatePopups -- Update the 7 popups with current table col info
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub UpdatePopups
+
+	Dim i, index As Integer
+	Dim tname As String
+
+	If TableInfo(ReadControlValue(UI_PU_GCTABLE), TAB_INFO_READONLY) = TRUE or TableInfo(ReadControlValue(UI_PU_GCTABLE), TAB_INFO_MAPPABLE) = FALSE Then
+		Note "The selected table is READONLY or not MAPPABLE. Please select another table."
+		index = FindFirstValidTable()
+		If index <> 0 Then
+			Alter Control UI_PU_GCTABLE
+				Value index	
+		Else 
+			Note ""
+		Exit Sub
+		End If
+	End If	
+
+	tname = TableInfo(ReadControlValue(UI_PU_GCTABLE), TAB_INFO_NAME)
+	Call GetColList(tname)
+	For i = UI_PU_LAT To UI_PU_PDOP 
+		Alter Control i
+			Title g_puColList
+	Next
+End Sub
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'FindFirstValidTable
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Function FindFirstValidTable as Integer
+
+	Dim i, index As Integer								'counter
+	Dim ntables As Integer							'number of available tables
+
+	index = 0
+	ntables = NumTables()
+	If ntables <> 0 Then
+		For i = 1 To ntables 
+			If TableInfo(i, TAB_INFO_READONLY) = FALSE AND TableInfo(i, TAB_INFO_MAPPABLE) = TRUE Then		
+				If index = 0 Then
+					index = i
+				End if
+			End If
+		Next
+	Else 
+		index = 0
+	End If
+
+	FindFirstValidTable = index
+
+End Function
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'OkHandler -- check geocode table settings
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub OKHandler
+	If TableInfo(ReadControlValue(UI_PU_GCTABLE), TAB_INFO_READONLY) = TRUE Then
+		Note "Selected Table is READONLY. Please select another table."
+		Dialog Preserve
+	ElseIf TableInfo(ReadControlValue(UI_PU_GCTABLE), TAB_INFO_MAPPABLE) = FALSE Then
+		Note "The selected table is not a MAPPABLE table. Please select another table."
+		Dialog Preserve
+	Else
+		g_gcSelTblIndex = TableInfo(ReadControlValue(UI_PU_GCTABLE),TAB_INFO_NUM)
+		g_gcSelTblName= TableInfo(ReadControlValue(UI_PU_GCTABLE),TAB_INFO_NAME)
+		Call GetColList(g_gcSelTblName)
+	End If
+End Sub
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'CancelHandler 
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub CancelHandler
+
+	If g_gcSelTblIndex <> 0 Then
+		g_gcSelTblName= TableInfo(g_gcSelTblIndex,TAB_INFO_NAME)
+		Call GetColList(g_gcSelTblName)	
+	Else 
+		g_gcSelTblName= ""	
+	End If
+ 
+End Sub

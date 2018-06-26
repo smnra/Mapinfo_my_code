@@ -1,0 +1,63 @@
+***  Installation Started 01/29/2007 8:33  ***
+Title: The Geographic Tracker - V3.1
+Source: G:\install\gps\setup.exe | 04-06-2001 | 07:48:44 | 1052998
+Install Mode - Standard Installation
+Made Dir: C:\Program Files\MapInfo\Professional\Gps
+File Copy: C:\Program Files\MapInfo\Professional\Gps\LICENSE.TXT | 11-01-1999 | 12:29:38 | | 4484 | 95718a9
+File Copy: C:\Program Files\MapInfo\Professional\Gps\GCODE.MB | 10-23-1995 | 20:09:26 | | 10642 | 9e548b51
+File Copy: C:\Program Files\MapInfo\Professional\Gps\GCODEDLG.MB | 10-23-1995 | 20:09:32 | | 9634 | 89f0b85c
+File Copy: C:\Program Files\MapInfo\Professional\Gps\GEOTRACK.DEF | 10-23-1995 | 20:12:16 | | 6325 | 4d91a07e
+File Copy: C:\Program Files\MapInfo\Professional\Gps\Geotrack.MB | 01-26-2000 | 10:44:16 | | 53944 | cf020a34
+File Copy: C:\Program Files\MapInfo\Professional\Gps\GEOTRACK.MBX | 01-26-2000 | 10:44:16 | | 34952 | 18c3d3ca
+File Copy: C:\Program Files\MapInfo\Professional\Gps\GTRKMBX.HLP | 10-30-1995 | 14:51:12 | | 24752 | 5c6a858a
+File Copy: C:\Program Files\MapInfo\Professional\Gps\GTRKMBX.MBP | 10-23-1995 | 20:13:04 | | 151 | 79ffac5c
+File Copy: C:\Program Files\MapInfo\Professional\Gps\MAKEGPS.HLP | 10-26-1995 | 21:19:02 | | 12057 | f7c80479
+File Copy: C:\Program Files\MapInfo\Professional\Gps\MAKEGPS.MBX | 10-02-1995 | 18:06:34 | | 4806 | 2ed2e4e4
+File Copy: C:\Program Files\MapInfo\Professional\Gps\MAPINFO.GDP | 11-14-1996 | 13:01:50 | | 101 | 6c49488d
+File Copy: C:\Program Files\MapInfo\Professional\Gps\TRACKER2.MB | 10-23-1995 | 20:09:42 | | 6853 | 4dcac349
+File Copy: C:\Program Files\MapInfo\Professional\Gps\TRKDLG.MB | 10-23-1995 | 20:09:24 | | 5757 | d4ca57d5
+File Copy: C:\Program Files\MapInfo\Professional\Gps\TRKMISC.MB | 10-23-1995 | 20:09:50 | | 20388 | 940ee4a2
+File Copy: C:\Program Files\MapInfo\Professional\Gps\TRKUI.MB | 10-23-1995 | 20:10:56 | | 6398 | d6cf45b1
+File Copy: C:\Program Files\MapInfo\Professional\Gps\SFRAN.GPS | 10-02-1995 | 17:29:10 | | 23277 | 410bde44
+File Copy: C:\Program Files\MapInfo\Professional\Gps\TSIPALM.DAT | 11-30-1995 | 14:13:08 | | 2402 | e8bb961
+File Copy: C:\Program Files\MapInfo\Professional\Gps\WASHDC.GPS | 10-02-1995 | 17:41:50 | | 30125 | edc8c6eb
+File Copy: C:\Program Files\MapInfo\Professional\Gps\Geotrack.exe | 07-14-2000 | 07:39:10 | 3.1.0.0 | 509440 | 5ed2eb0c
+MapInfo Special Edition...
+File Copy: C:\Program Files\MapInfo\Professional\Gps\readme.rtf | 09-01-2000 | 07:54:36 | | 13600 | b5e31caf
+File Copy: C:\WINDOWS\system32\Bmauth32.dll | 05-05-1999 | 09:14:04 | 3.0.0.0 | 37376 | ee393711
+File Copy: C:\WINDOWS\system32\bmdlg32.dll | 07-13-2000 | 07:55:30 | 1.1.0.21 | 826368 | 241810c4
+File Copy: C:\WINDOWS\system32\bmreg32.dll | 02-06-2001 | 13:36:54 | 1.2.0.1 | 61440 | 5f3f07c4
+File Copy: C:\WINDOWS\system32\GTrack32.dll | 04-17-2000 | 13:54:44 | 3.0.0.107 | 114176 | cd86f559
+File Copy: C:\WINDOWS\system32\gtrkrc32.dll | 01-26-2000 | 09:44:50 | 3.0.0.0 | 35840 | 15012e79
+File Copy: C:\WINDOWS\system32\INETWH32.dll | 10-20-1998 | 15:05:42 | 7.0.131.0 | 54784 | b6a9d9ba
+Could not Self-Register: C:\WINDOWS\system32\GTrack32.dll
+Could not Self-Register: C:\WINDOWS\system32\gtrkrc32.dll
+File Copy: C:\Program Files\MapInfo\Professional\Gps\geotrack.cnt | 11-10-2000 | 08:37:26 | | 3607 | 2b826065
+File Copy: C:\Program Files\MapInfo\Professional\Gps\Geotrack.hlp | 11-10-2000 | 08:37:36 | | 67189 | 400b4cef
+File Copy: C:\Program Files\MapInfo\Professional\Gps\Trckr-trckAVX instructions.doc | 02-09-2001 | 12:45:10 | | 21504 | 5253d778
+File Copy: C:\Program Files\MapInfo\Professional\Gps\remove.exe | 12-07-2000 | 11:45:56 | | 149504 | 30fdd633
+Shell Link: C:\Documents and Settings\tjh\桌面\Geographic Tracker V3.1.lnk
+Link Info: C:\Program Files\MapInfo\Professional\Gps\Geotrack.exe | C:\Program Files\MapInfo\Professional\Gps\GeoTrack.exe | C:\Program Files\MapInfo\Professional\Gps\GeoTrack.exe | 0 | 1 | 0 | 
+Made Dir: C:\Documents and Settings\All Users\「开始」菜单\程序\Blue Marble Geographics
+Made Dir: C:\Documents and Settings\All Users\「开始」菜单\程序\Blue Marble Geographics\Geographic Tracker
+Shell Link: C:\Documents and Settings\All Users\「开始」菜单\程序\Blue Marble Geographics\Geographic Tracker\Geographic Tracker GeoTrack MBX Help.lnk
+Link Info: C:\WINDOWS\system32\winhlp32.exe | C:\Program Files\MapInfo\Professional\Gps |  | 0 | 1 | 0 | C:\Bluemarble\Build\AppTools\gtracker\maindir\Gtrkmbx.hlp
+Shell Link: C:\Documents and Settings\All Users\「开始」菜单\程序\Blue Marble Geographics\Geographic Tracker\Geographic Tracker MakeGPS MBX Help.lnk
+Link Info: C:\WINDOWS\system32\winhlp32.exe | C:\Program Files\MapInfo\Professional\Gps |  | 0 | 1 | 0 | C:\Bluemarble\Build\AppTools\gtracker\maindir\Makegps.hlp
+Shell Link: C:\Documents and Settings\All Users\「开始」菜单\程序\Blue Marble Geographics\Geographic Tracker\Geographic Tracker 3.1 Readme.lnk
+Link Info: C:\Program Files\MapInfo\Professional\Gps\readme.rtf | C:\Program Files\MapInfo\Professional\Gps |  | 0 | 1 | 0 | 
+Shell Link: C:\Documents and Settings\All Users\「开始」菜单\程序\Blue Marble Geographics\Geographic Tracker\Geographic Tracker 3.1 Help.lnk
+Link Info: C:\WINDOWS\system32\winhlp32.exe | C:\Program Files\MapInfo\Professional\Gps |  | 0 | 1 | 0 | C:\Bluemarble\HlpDoc\AppTools\Geographic Tracker\Help\geotrack.hlp
+Shell Link: C:\Documents and Settings\All Users\「开始」菜单\程序\Blue Marble Geographics\Geographic Tracker\Geographic Tracker 3.1 .lnk
+Link Info: C:\Program Files\MapInfo\Professional\Gps\Geotrack.exe | C:\Program Files\MapInfo\Professional\Gps |  | 0 | 1 | 0 | 
+Shell Link: C:\Documents and Settings\All Users\「开始」菜单\程序\Blue Marble Geographics\Geographic Tracker\Geographic Tracker 3.1 UnInstall.lnk
+Link Info: C:\Program Files\MapInfo\Professional\Gps\remove.exe | C:\Program Files\MapInfo\Professional\Gps |  | 0 | 1 | 0 | 
+RegDB Key: Software\Microsoft\Windows\CurrentVersion\Uninstall\Geographic Tracker 3.1
+RegDB Val: Geographic Tracker 3.1
+RegDB Name: DisplayName
+RegDB Root: 2
+RegDB Key: Software\Microsoft\Windows\CurrentVersion\Uninstall\Geographic Tracker 3.1
+RegDB Val: C:\Program Files\MapInfo\Professional\Gps\remove.exe 
+RegDB Name: UninstallString
+RegDB Root: 2
+User Rights: Admin

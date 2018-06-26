@@ -1,0 +1,756 @@
+'****************************************************************************
+'  trkmisc.mb
+'
+'  Misc. subroutine module for geotrack.mbx 
+'
+'	Created: 	11 August 1995
+'
+'	Copyright (c) 1995 Blue Marble Geographics, Inc. All Rights Reserved.
+'
+'  This source code is supplied without warranty and is intended as
+'  sample source code for enabling the use of GPS from within MapInfo.
+'****************************************************************************
+
+Include "mapbasic.def"
+Include "geotrack.def"
+Include "menu.def"
+Include "icons.def"
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'dPrint(Byval msg As String)
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub dPrint(Byval msg As String)
+	If bDebug Then
+		Print msg
+	End If 
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'StartGeotrack -- runs the geotrack application
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub StartGeotrack		
+
+	Call dPrint ("In- StartGeotrack")
+	Dim sGeotrackPath As String
+
+	OnError Goto StartGeotrackError
+
+	sGeotrackPath = ApplicationDirectory$() + "GEOTRACK.EXE"
+	Run Program sGeotrackPath
+
+	after_error:	
+
+	Call dPrint ("Out- StartGeotrack")
+	
+Exit Sub
+
+StartGeotrackError:
+	Call dPrint ("StartGeotrackError: " + str$(Err()) + "|" + Error$())
+	Note "Could not find Geotrack.EXE. Please find and run Geotrack.EXE and select 'Connect' from its Options menu."
+	Resume after_error
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'EndGeotrack -- exits the geotrack application
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub EndGeotrack	
+
+	Call dPrint ("In-EndGeoTrack")
+
+	Dim chan_num As Integer
+
+	OnError Goto EndGeoTrackError
+
+	chan_num = DDEInitiate("GEOTRACK","BMG")
+
+	DDEExecute chan_num, "OFF"
+
+	DDEExecute chan_num, "EXIT"
+
+	after_error:
+
+	Call dPrint ("Out-EndGeoTrack")
+
+	Exit Sub
+
+EndGeoTrackError:
+	Call dPrint ("EndGeoTrackError:" + str$(Err()) + " | " + Error$())
+	Resume after_error
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'InitApp -- initialize the various variables
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub InitApp
+
+	Call dPrint ("In-InitApp")
+
+	OnError Goto InitAppError
+
+	Halt = 0						' tracking on
+	bHoldOff = True					' don't process any DDE yet
+
+	g_bPLnGeocode = False				' polyline geocoding active/inactive
+	g_bGPSPause = False
+
+	bRecenter = TRUE					' set auto recenter to true
+
+	g_gcSelTblIndex = 0				' no geocode table selected
+	g_gcSelTblName = ""				' no geocode table selected
+
+	g_trkSelWndID = 0					' no tracking windowselected
+
+	g_gcSymbol = CurrentSymbol()			' assign geocode point symbol to current
+	g_tkSymbol = CurrentSymbol()			' assign track point symbol to current
+
+	g_gcPen = CurrentPen()				' assign geocode pen style to current 
+	g_tkPen = CurrentPen()				' assign track pen style to current 
+	 
+	g_NullSymbol = MakeSymbol(31,BLACK,12) 	' create invisible track Symbol
+	g_NullPen = MakePen(0,1,BLACK)	   	' create invisible track Pen	
+
+	g_iTrack = 1					' set track variable to symbol
+
+	g_bDist = FALSE					' dist check box value 
+	g_sTolDist = "0"					' set distance value to 0
+
+	g_iLat = 1						' set all list values to "None"
+	g_iLon= 1
+	g_iElev = 1
+	g_iGPSTime = 1
+	g_iSpeed = 1
+	g_iHeading = 1
+	g_iPDOP = 1
+
+	Call CreateAnimateLayer
+
+	Dim nWindows, i As Integer
+
+	g_sMappable = ""			'string of open mappable windows
+	nWindows = NumWindows()
+
+	Redim  g_WinIdList(nWindows)
+	
+	Call dPrint ("nWindows: " + Str$(nWindows))
+
+	For i = 1 To nWindows
+		If WindowInfo(WindowID(i),WIN_INFO_TYPE) = WIN_MAPPER Then
+'			g_nMapWindows = g_nMapWindows + 1 
+		End If 
+		g_WinIdList(i) = WindowID(i)
+		Call dPrint ("g_WinIdList(" + str$(i) + " ): " + Str$(g_WinIdList(i)))
+	Next
+
+	If nWindows = 0 Then
+		Note "At least one Map Window must be open to use the Geotrack.MBX." 
+		g_trkSelWndID = 0
+	Elseif nWindows > 0 Then
+		For i = 1 To nWindows
+			If WindowInfo(WindowID(i),WIN_INFO_TYPE) = WIN_MAPPER Then
+				g_sMappable = g_sMappable + WindowInfo(WindowID(i), WIN_INFO_NAME)+ ";"
+				Set Window WindowID(i)
+					Front
+				g_trkSelWndID  = WindowID(i)
+				'Note "Tracking Window set to: " + WindowInfo(WindowID(i), WIN_INFO_NAME) + ".  To redefine the tracking window select 'Setup Tracking' from the GPS menu." 
+				Add Map Layer TempGPS Animate
+				Call dPrint ("After Add TempGPS as Animate to: " + g_trkSelWndID) 
+				bHoldOff = False
+				Exit Sub
+			End If
+		Next 
+	End If
+
+	after_error:
+
+	Call dPrint ("Out-InitApp")
+	Exit Sub
+
+InitAppError:
+	Call dPrint("InitAppError: " + str$(Err()) + "|" + Error$() )
+	Resume after_error	
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'CreateAnimateLayer - sets up the Animate Layer 
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub CreateAnimateLayer			
+
+	Call dPrint ("In-CreateAnimate")
+
+	Dim bExists as Logical
+	Dim iRet as integer		
+	dim lHalt as integer
+
+	lHalt = Halt
+	Halt = 1
+
+	if FileExists(ApplicationDirectory$() + "TempGPS.TAB") then
+		OnError Goto OpenTableError
+'		Open Table ApplicationDirectory$() + "TempGPS.TAB"
+		iRet = TableInfo(TempGPS, TAB_INFO_NROWS)
+		Close Table TempGPS
+		not_open:
+		Kill ApplicationDirectory$() + "TempGPS.TAB"
+	end if
+		after_check:
+	Create Table "TempGPS"					'create new table
+		(ObjectId SmallInt)
+		File ApplicationDirectory$() + "TempGPS.TAB"
+		
+	Rollback Table "TempGPS"
+	Close Table "TempGPS"
+	Open Table ApplicationDirectory$() + "TempGPS.TAB" Hide
+	
+	Create Map
+		For "TempGPS"
+	
+	Set Table "TempGPS" FastEdit On Undo Off
+	
+	Create Point Into Variable GPSPoint
+		(0.00,0.00)
+		Symbol g_NullSymbol
+		
+	Create PLine Into Variable GPSPLine 2
+		(0.00,0.00) (0.00,0.00)
+		Pen g_tkPen
+	
+	Insert Into "TempGPS" (ObjectId,obj)
+		Values (1, GPSPoint)
+	
+	Insert Into "TempGPS" (ObjectId,obj)
+		Values (2, GPSPLine)
+	
+'-----end of create animate table
+
+	Halt = lHalt
+
+	Call dPrint ("Out-CreateAnimate")
+	Exit Sub
+
+OpenTableError:
+	Call dPrint ("In OpenTableError: " + str$(Err()) + " | " + Error$())
+	Resume not_open 
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'ProcessUpdate -- process an UPDATE message from the Geographic Tracker
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub ProcessUpdate
+
+'	Call dPrint ("In-ProcessUpdate")
+
+	OnError Goto ProcessUpdateError
+	
+	If g_trkSelWndID = 0 Then
+		Note "A valid Tracking window has not been selected. Please select Setup Tracking from the GPS menu and specify a Mappable table to track into. "
+		Call GPSOff
+		Exit Sub
+	End If
+
+	If bHoldOff = True Then
+		Exit Sub
+	End If
+
+	Dim sVersion, sLat, sLon, sGeoidElev, sElipElev, sSpeed, sHeading, sPDOP, sGPSTime As String
+
+	Dim p_len As Float
+	Dim bAdd As Logical
+
+	Dim xPos, yPos As Float
+	Dim rows As Integer	
+
+	Dim startPos, endPos As Integer
+
+	'***Get Update Msg Version - ignored 
+	'	startPos = 8
+	'	endPos = InStr(startPos, msg, ",")
+	'	sVersion = Mid$(msg, startPos, endPos-startPos)
+	'	g_iVersion = Val(sVersion)
+
+	'***Get Latitude
+		startPos = 10
+		endPos = InStr(startPos, msg, ",")
+		sLat = Mid$(msg, startPos, endPos-startPos)
+		If sLat <> "" Then
+			g_fLat = Val(sLat)
+		End If 
+
+	'***Get Longitude			
+		startPos = endPos + 1
+		endPos = InStr(startPos, msg, ",")
+		sLon = Mid$(msg, startPos, endPos-startPos)
+		If sLon <> "" Then
+			g_fLon = Val(sLon)
+ 		End If
+
+	'***Get Geoid Elevation
+		startPos = endPos + 1
+		endPos = InStr(startPos, msg, ",")
+		sGeoidElev = Mid$(msg, startPos, endPos-startPos)
+		If sGeoidElev <> "" Then
+			g_fGeoidElev = Val(sGeoidElev)
+		End If
+
+	'***Get Ellipsoid Elevation
+		startPos = endPos + 1
+		endPos = InStr(startPos, msg, ",")
+
+'		sElipElev = Mid$(msg, startPos, endPos-startPos)
+'		If  sElipElev <> "" Then
+'			g_fElipElev = Val(sElipElev)
+'		End If
+
+	'***Get Speed
+		startPos = endPos + 1
+		endPos = InStr(startPos, msg, ",")
+		sSpeed = Mid$(msg, startPos, endPos-startPos)
+		If sSpeed <> "" Then
+			g_fSpeed = Val(sSpeed)
+		End If
+
+	'***Get Heading
+		startPos = endPos + 1
+		endPos = InStr(startPos, msg, ",")
+		sHeading = Mid$(msg, startPos, endPos-startPos)
+		If sHeading <> "" Then
+			g_fHeading = Val(sHeading)
+		End If
+
+	'***Get PDOP
+		startPos = endPos + 1
+		endPos = InStr(startPos, msg, ",")
+		sPDOP = Mid$(msg, startPos, endPos-startPos)
+		If sPDOP <> "" Then
+			g_fPDOP = Val(sPDOP)
+		End If
+
+	'***Get GPSTime
+		startPos = endPos + 1
+		endPos = InStr(startPos, msg, ",")
+		sGPSTime = Mid$(msg, startPos, endPos-startPos)				
+		If sGPSTime <> "" Then
+			g_fGPSTime = Val(sGPSTime)
+		End If
+
+	' Plot the tracking if necessary 
+		If Halt = 0 Then
+			Do Case g_iTrack
+				Case 1 ' symbol
+					Fetch First from TempGPS
+					GPSPoint = TempGPS.obj
+
+					Alter Object GPSPoint
+						Geography OBJ_GEO_POINTX, g_fLon
+					Alter Object GPSPoint
+						Geography OBJ_GEO_POINTY, g_fLat
+					Alter Object GPSPoint
+						Info OBJ_INFO_SYMBOL, g_tkSymbol
+					Update TempGPS Set obj = GPSPoint
+						Where ROWID = 1
+
+				Case 2 ' polyline
+					
+					Fetch Last From TempGPS
+					GPSPLine = TempGPS.obj					
+
+					Alter Object GPSPLine
+						Info OBJ_INFO_PEN, g_tkPen
+
+					If ObjectGeography(GPSPLine, OBJ_GEO_LINEBEGX) = 0.0 Then
+						Alter Object GPSPLine
+							Node Set Position 1, 1 (g_fLon, g_fLat)
+						Alter Object GPSPLine	
+							Info OBJ_INFO_PEN, g_NullPen
+						Update TempGPS Set obj = GPSPLine
+							Where ROWID = 2
+					Elseif ObjectGeography(GPSPLine, OBJ_GEO_LINEENDX) = 0.0 Then	
+						Alter Object GPSPLine
+							Node Set Position 1, 2 (g_fLon,g_fLat)
+						Alter Object GPSPLine
+							Info OBJ_INFO_PEN, g_NullPen
+						Update TempGPS Set obj = GPSPLine
+							Where ROWID = 2
+					Else
+						If g_bDist = True Then		'distance tolerance checked	
+							g_sDistUnits = "m"
+							p_len = Distance(ObjectNodeX(GPSPLine,1,1),ObjectNodeY(GPSPLine,1,1), g_fLon, g_fLat, g_sDistUnits)
+							If p_len < Val(g_sTolDist) Then
+								Exit Sub	
+							End If		
+						End If
+
+						If ObjectInfo(GPSPLine, OBJ_INFO_NPNTS) > PLINE_MAXPTS Then 
+							Call ReInitPLine
+						End If
+
+						Alter Object GPSPLine
+							Node Add (g_fLon, g_fLat)
+						Alter Object GPSPLine
+							Info OBJ_INFO_PEN, g_tkPen
+						Update TempGPS Set obj = GPSPLine
+							Where ROWID = 2
+					End If
+			End Case
+			
+			If g_bPLnGeocode = True Then
+				Call UpdatePLnGeocode
+			End If
+
+			If bRecenter = True And TestMapExtents() = True Then
+					Call Recenter
+			End if
+		End If
+		'end of plotting
+'		Call dPrint ("Out-ProcessUpdate")
+	Exit Sub
+
+ProcessUpdateError: 
+	Call dPrint ("ProcessUpdateError:" + str$(Err()))
+	Resume Next
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'GPSOff -- set GPS to off mode in Geographic Tracker
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub GPSOff
+	Call dPrint ("In-GPSOff")
+	Dim chan_num As Integer
+
+	OnError Goto GPSOffError
+	chan_num = DDEInitiate("GEOTRACK", "BMG")
+	DDEExecute  chan_num, "OFF"
+	DDETerminate  chan_num
+
+	Call dPrint ("Out-GPSOff")
+	Exit Sub
+
+GPSOffError:
+	Call dPrint ("GPSOffError: " + Err() +  Error$)
+	If Err() = 697 Then 	'app doesn't respond
+		Note "The Geographic Tracker does not respond. Please check that the Geographic Tracker is running correctly."
+	Elseif Err() = 699 then
+		Call dPrint ("GPSOffError: " + Err() + "|" + Error$() )
+	End If
+	Resume Next
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'GPSLive -- set GPS to live mode in Geographic Tracker
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub GPSLive
+
+	Call dPrint ("In-GPSLive")
+
+	Dim chan_num as Integer
+
+	OnError Goto GPSLiveError
+	chan_num = DDEInitiate("GEOTRACK", "BMG")
+	DDEExecute  chan_num, "LIVE"
+	DDETerminate  chan_num
+
+	bHoldOff = False
+	after_error:
+
+	Call dPrint ("Out-GPSLive")
+
+	Exit Sub
+
+GPSLiveError:
+	Call dPrint ("GPSLiveError: " + Err() + "<" + Error$() + ">")
+	Resume after_error
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'GPSSimulation -- Play a GPS Log File in the Geographic Tracker
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub GPSSimulation 
+
+	Call dPrint ("In-GPSSimulation")  	
+
+	Dim chan_num as Integer
+	Dim logfilename as String
+
+	OnError Goto GPSSimulationError
+	chan_num = DDEInitiate("GEOTRACK", "BMG")
+	logfilename = FileOpenDlg(ApplicationDirectory$(), "" , "GPS", "Select a GPS Simulation File")
+	If logfilename <> "" Then
+		DDEExecute  chan_num, "PLAY " + logfilename
+	Else
+		Exit Sub	
+	End If
+
+	DDETerminate chan_num
+	
+	bHoldOff = False
+
+	after_error:
+
+	Call dPrint ("Out-GPSSimulation")  	
+
+	Exit Sub
+
+
+GPSSimulationError:
+	Call dPrint ("In-GPSSimulationError: " + Err() + "|" + Error$())  	
+	Resume after_error
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'Recenter -- if tracking and valid coord recenter map window on coord
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub Recenter
+	Call dPrint ("In-Recenter")
+	OnError Goto RecenterError
+	If g_trkSelWndID <> 0 Then
+		If g_fLon <> 0.00 And g_fLat <> 0.00 Then
+			Set Map Window g_trkSelWndID 
+				Center (g_fLon, g_fLat)
+		'	Set Map Center (g_fLon, g_fLat)	
+		End If
+	End If
+	Call dPrint ("Out-Recenter")
+	Exit Sub
+
+RecenterError:
+	Call dPrint ("RecenterError: " + Error$ + "|" + Str$(Err()))
+	Call ValidateWindow
+	Resume 0
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'TestMapExtents
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Function TestMapExtents as Logical
+
+	Call dPrint ("In- TestMapExtents")
+
+	Dim minX, minY, maxX, maxY as Float
+
+	OnError GoTo TestMapError
+
+	minX = MapperInfo(g_trkSelWndID, MAPPER_INFO_MINX)
+	minY = MapperInfo(g_trkSelWndID, MAPPER_INFO_MINY)
+	maxX = MapperInfo(g_trkSelWndID, MAPPER_INFO_MAXX)
+	maxY = MapperInfo(g_trkSelWndID, MAPPER_INFO_MAXY)
+
+	'g_fLat, g_fLon
+	if g_fLat < minY or g_fLat > maxY or g_fLon < minX or g_fLon > maxX then
+		TestMapExtents = True
+		Call dPrint ("				TestMapExtents-T")
+	Else 
+		TestMapExtents = False
+		Call dPrint ("				TestMapExtents-F")
+	End If
+
+	Call dPrint ("Out- TestMapExtents")
+	Exit Function
+
+TestMapError:
+	Call dPrint ("TestMapExtentsError:" + Error$ + "|" + Str$(Err()))
+	Call ValidateWindow
+	Exit Sub
+
+End Function
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'TerminateMBX procedure  -- exit mbx application and kill Geotrack
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub TerminateMBX
+	
+	Call dPrint ("In-TerminateMBX")
+
+	OnError Goto TerminateError
+
+	bHoldOff = True	
+
+	Call dPrint ("Calling EndProgram")
+
+	End Program
+
+	Exit Sub
+	
+TerminateError:
+	Call dPrint ("Terminate Error:" + Error$() + "|" + str$(Err()))
+	End Program
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'ChkMapWindows -- checks for open map windows and constructs popup menu string
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub ChkMapWindows				
+
+	Call dPrint ("In- ChkMapWindows")
+
+	Dim nWindows, i As Integer
+
+	g_sMappable = ""
+	nWindows = NumWindows()
+	For i = 1 To nWindows
+		If WindowInfo(WindowID(i),WIN_INFO_TYPE) = WIN_MAPPER Then
+			g_sMappable = g_sMappable + WindowInfo(WindowID(i), WIN_INFO_NAME)+ ";"
+		End If
+	Next 
+	Call dPrint ("Out- ChkMapWindows")
+
+End Sub
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'SetGPSMapWindow -- sets the GPS tracking window 
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub SetGPSMapWindow
+	
+	Call dPrint ("In-SetGPSWindow")
+
+	OnError Goto SetGPSMapWindowError
+
+	Dim i, iMap, startPos, endPos, nWindows, bMapWin As Integer
+	Dim sMapWinName As String
+	Dim lHalt as Integer
+	Dim bWinChanged as Logical
+	Dim nTables as Integer
+
+	lHalt = Halt
+	Halt = 1
+	
+	startPos = 1
+	endPos = 1
+
+	iMap = ReadControlValue(UI_PU_TRACKINGWINDOW)			'get index of current selection in trk window popup
+
+	If iMap = 0 Then
+		Note "Defaulting to the first available map window."
+		iMap = 1
+	End If
+
+	For i = 1 To iMap
+		endPos = InStr(startPos, g_sMappable, ";")			'get string position of ";"	
+		sMapWinName = Mid$(g_sMappable, startPos, endPos-startPos)	'get window name at string position i
+		startPos = endPos + 1
+	Next	
+
+'sMapWinName = name of sel window in popup
+	nWindows = NumWindows()
+	For i = 1 To nWindows
+		bMapWin = StringCompare(sMapWinName, WindowInfo(WindowID(i), WIN_INFO_NAME))
+		If bMapWin = 0 Then				' if sel window name = window i, this is the one you want
+			Set Window WindowID(i)			' set this window to front to assign animate layer
+				Front
+			If g_trkSelWndID = WindowID(i) Then
+				bWinChanged = False
+				Call dPrint ("g_trkSelWndId(Same):" + Str$(g_trkSelWndId))
+			Else
+				g_trkSelWndID = WindowID(i)
+				bWinChanged = True
+				Call dPrint ("g_trkSelWndId(Changed):" + Str$(g_trkSelWndId))
+			End If 
+		End If	
+	Next
+
+	If bWinChanged = False Then
+		Call ReInitPoint
+		Call ReInitPLine
+	End If
+
+	If bWinChanged = True Then
+		Call CreateAnimateLayer
+		Add Map Window g_trkSelWndId Layer TempGPS Animate
+		Call ReInitPoint
+		Call ReInitPLine
+	End If	
+
+	after_tablecheck:	
+
+	Halt = lHalt
+	Call dPrint ("Out-SetGPSWindow")
+
+	Exit Sub
+
+SetGPSMapWindowError:
+	Call dPrint ("In-SetGPSMapWinError: " + Err() + "|" + Error$)
+	Resume after_tablecheck
+
+End Sub
+
+'**************************************************************************
+'ReInitPoint -- deletes old tracking polyline and creates a new blank one
+'**************************************************************************
+Sub ReInitPoint
+
+	Call dPrint ("In-ReInitPoint")		
+
+	OnError Goto InitPointError
+
+		Rollback Table TempGPS	
+		Fetch First From TempGPS				'first record in TempGPS is always the GPSPoint
+			GPSPoint = TempGPS.obj
+		Alter Object GPSPoint
+			Info OBJ_INFO_SYMBOL, g_NullSymbol	
+		Update TempGPS Set obj = GPSPoint		
+			Where ROWID = 1		
+	after_init:
+
+	Call dPrint ("Out-ReInitPoint")
+	Exit Sub
+
+InitPointError:
+	Call dPrint ("In-InitPointError" + Err() + Error$())		
+	Resume after_init
+End Sub
+
+'**************************************************************************
+'ReInitPLine -- deletes old tracking polyline and creates a new blank one
+'**************************************************************************
+Sub ReInitPLine		
+	Call dPrint ("In-ReInitPLine")
+			
+	OnError Goto InitPLineError
+		Rollback Table TempGPS
+		Delete Object From TempGPS 			'second record in TempGPS is always the GPSPLine
+			Where ROWID = 2
+		Create PLine Into Variable GPSPLine 2
+			(0.00,0.00) (0.00,0.00)
+			Pen g_tkPen
+		Update TempGPS Set obj = GPSPLine		
+			Where ROWID = 2
+	after_init:
+	
+	Call dPrint ("Out-ReInitPLine")
+	Exit Sub
+
+InitPLineError:
+	Call dPrint ("In-InitPLineError"+ Err() + Error$())		
+	Resume after_init
+End Sub
+
+'**************************************************************************
+'ValidateWindow -- on tracking window error, initiate another tracking window
+'**************************************************************************
+Sub ValidateWindow				
+
+	Call dPrint ("In-ValidateWindow")
+
+	Dim nWindows, i as Integer
+	Dim bOK as Logical
+
+	bOK = false
+	nWindows = NumWindows()
+
+	If nWindows = 0 Then
+		Note "There must be at least one mapping window open to use GeoTrack.MBX. Please open a map window before re-activating GPS link."
+		Call GPSOff
+		Exit Sub
+	End If
+
+	For i = 1 To nWindows 
+		If g_trkSelWndID = WindowInfo(i, WIN_INFO_WND) Then 	'previously selected trk window exists
+			bOK = True	
+			Exit Sub
+		End If
+	Next
+
+	If bOK = false Then				'previously selected trk window doesn't exist
+		Note "Please choose a tracking window."
+		Call TrackingDlg
+	End If
+	Call dPrint ("Out-ValidateWindwow")
+End Sub

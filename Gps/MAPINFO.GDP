@@ -1,0 +1,6 @@
+; GPS direct pack for MapInfo 4.0
+
+[Settings]
+Server=MapInfo
+Topic=GeoTrack.mbx
+Message=UPDATE

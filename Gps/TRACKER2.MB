@@ -1,0 +1,246 @@
+'****************************************************************************
+'	tracker2.mb
+'
+' 	Main application module for geotrack.mbx - Initialization and DDE processing
+'
+'	Created: 	08 Jun 1995
+'
+'	Copyright (c) 1995 Blue Marble Geographics, Inc. All Rights Reserved.
+'				
+'  This source code is supplied without warranty and is intended as
+'  sample source code for enabling the use of GPS from within MapInfo.
+'****************************************************************************
+
+Include "mapbasic.def"
+Include "geotrack.def"
+Include "menu.def"
+
+Declare Sub Main						'main application function
+Declare Sub WinClosedHandler				'handler for acting on a Window Closing
+Declare Sub RemoteMsgHandler				'handler for receiving GPS position information from Geotrack
+Declare Sub EndHandler					'application clean up and halts mbx
+					
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+' the MAIN procedure
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub Main
+
+bDebug = FALSE				'Set to TRUE to see the Print statements, FALSE to ignore
+	
+	Call dPrint(chr$(12))		'clears the Message Window
+	Call dPrint ("In-Main")
+
+	Call InitApp			'initialize application variables
+	Call MainMenu			'Create main application "GPS" menu
+	Call GeoCodeButton		'Create GPS Button Pad for geocoding and simulation file playback
+	Call StartGeoTrack		'start the Geographic Tracker Application	
+
+	Call dPrint("Out-Main")
+End Sub   
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+' the RemoteMsgHandler procedure
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub RemoteMsgHandler ' fires when Mbx receives a DDE Execute from an external app
+	
+'	Call dPrint ("In -RMH")
+
+	OnError Goto RMHError
+
+	If bHoldOff = True Then		' if GPS is turned off - don't process this message
+		Exit Sub
+	End If
+
+	Dim msgLen As Integer
+	Dim endEXEPos As Integer
+	Dim msgID As String
+
+	msg = CommandInfo(CMD_INFO_MSG)		'set msg to the DDE Execute 
+
+	Call dPrint("MSG: " + msg) 
+
+	endEXEPos = Instr(1, msg, " ")		'find first space in msg
+
+	If endEXEPos = 0 Then 				'space was not found, msgId is whole message
+		msgID = msg
+	Else
+		msgID = Left$(msg,endEXEPos - 1)	'space found msgID 
+		msgLen = Len(msg)
+	End If
+ 
+	'********************************************************UPDATE MESSAGE
+	If StringCompare(msgID, "UPDATE") = 0 And Halt = 0 Then
+
+		If NumTables() = 0 Then		'if no open tables - notify user and don't process message
+			Call GPSOff
+			Note "Please open a map window and setup tracking."  
+			Exit Sub
+		End If
+
+		If g_trkSelWndID = 0 Then 	'no window selected for tracking output
+			Call GPSOff
+			Note "Please choose a map window for tracking by selecting 'Setup Tracking' from the 'GPS' menu." 
+			Exit Sub
+		End If
+
+		Call ProcessUpdate		'handle DDE Execute as a GPS Update msg
+	End If 
+
+	'********************************************************PAUSED MESSAGE
+	If StringCompare(msgID, "PAUSE") = 0 Then	'Log file paused in tracker, update UI
+		Call GPSPauseUI
+	End If
+
+	'********************************************************RESUME MESSAGE
+	If StringCompare(msgID, "FORWARD") = 0 Then 'Log file resume in tracker, update UI
+		Call GPSForwardUI
+	End If
+
+	'********************************************************OFF MESSAGE
+	If StringCompare(msgID, "OFF") = 0 Then	'GPS turned off in Tracker, update UI
+
+		Alter Menu Item ID UI_MN_GPSOFF
+			Check
+		Alter Menu Item ID UI_MN_GPSLIVE
+			Uncheck
+		Alter Menu Item ID UI_MN_GPSSIMULATION
+			Uncheck
+
+		Alter Menu Item ID UI_MN_POINTGEOCODE
+			Disable
+		Alter Menu Item ID UI_MN_POLYGEOCODE
+			Disable		
+
+		Alter Button ID UI_PB_POINTGEOCODE
+			Disable
+		Alter Button ID UI_PB_POLYGEOCODE
+			Disable
+		Alter Button ID UI_PB_PAUSEGPS
+			Disable
+
+		g_fLat = 0.00		'initialize current lat/lon values
+		g_fLon = 0.00
+	
+		Call ReInitPoint		'initialize tracking symbols
+		Call ReInitPLine
+		
+		Halt = 1			'turn tracking off
+	End If
+
+	'********************************************************LIVE MESSAGE
+	If StringCompare(msgID, "LIVE") = 0 Then	'GPS turned to LIVE in Tracker, update UI
+	
+		Alter Menu Item ID UI_MN_GPSOFF
+			Uncheck
+		Alter Menu Item ID UI_MN_GPSLIVE
+			Check
+		Alter Menu Item ID UI_MN_GPSSIMULATION
+			Uncheck
+
+		Alter Menu Item ID UI_MN_POINTGEOCODE
+			Enable
+		Alter Menu Item ID UI_MN_POLYGEOCODE
+			Enable
+
+		Alter Button ID UI_PB_POINTGEOCODE
+			Enable
+		Alter Button ID UI_PB_POLYGEOCODE
+			Enable
+		Alter Button ID UI_PB_PAUSEGPS
+			Disable
+
+		g_fLat = 0.00			'initizialize current lat/lon vals
+		g_fLon = 0.00
+
+		Call ReInitPoint			'initialize tracking symbols
+		Call ReInitPLine
+
+		Halt = 0				'turn tracking on
+	End If
+
+	'********************************************************PLAYING MESSAGE
+	If StringCompare(msgID, "PLAYING") = 0 Then	'simulation file started in tracker, update UI
+
+		Alter Menu Item ID UI_MN_GPSOFF
+			Uncheck
+		Alter Menu Item ID UI_MN_GPSLIVE
+			Uncheck
+		Alter Menu Item ID UI_MN_GPSSIMULATION
+			Check
+
+		Alter Menu Item ID UI_MN_POINTGEOCODE
+			Enable
+		Alter Menu Item ID UI_MN_POLYGEOCODE
+			Enable
+
+		Alter Button ID UI_PB_PAUSEGPS
+			Enable
+		Alter Button ID UI_PB_PAUSEGPS
+			Uncheck
+
+		g_bGPSPause = False
+
+		Alter Button ID UI_PB_POINTGEOCODE
+			Enable
+		Alter Button ID UI_PB_POLYGEOCODE
+			Enable
+
+		g_fLat = 0.00					'reinitialize current lat/lon vals
+		g_fLon = 0.00
+
+		Call ReInitPoint					'reinitialize tracking symbols
+		Call ReInitPLine
+
+		Halt = 0						'turn tracking on
+	End If
+
+'	Call dPrint ("Out-RMH")
+
+	Exit Sub
+	
+RMHError:
+	Call dPrint ("In RMHError: " + Error$() + "|" + str$(Err()))
+	Call GPSOff
+	Exit Sub
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+' the WinClosedHandler procedure
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub WinClosedHandler
+ 
+	Call dPrint ("WinClosedHandler: " + CommandInfo(CMD_INFO_WIN)) 	
+
+	If CommandInfo(CMD_INFO_WIN) = g_trkSelWndID Then	
+		Call dPrint ("Tracking Window Closed")
+		Halt = 1
+		g_trkSelWndID = 0
+		Call GPSOff
+	End If
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+' the EndHandler procedure
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub EndHandler
+
+	Call dPrint ("In-EndHandler")
+	
+	bHoldOff = True	
+
+	OnError Goto TerminateError
+
+	Call EndGeotrack
+
+	Open Table ApplicationDirectory$() + "TempGPS.TAB" 
+	Rollback Table TempGPS
+	Drop Table TempGPS
+
+	Call dPrint ("Out-EndHandler")
+
+Exit Sub
+
+TerminateError:
+	Call dPrint ("			EH-TermError:" + str$(Err()) + " | " + Error$)
+	Resume Next
+End Sub

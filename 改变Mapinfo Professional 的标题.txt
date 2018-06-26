@@ -1,0 +1,43 @@
+MapBasic程序：改变Mapinfo Professional 的标题
+
+'改变Mapinfo Professional 的标题
+Include "MENU.DEF"
+Include "MAPBASIC.DEF"
+Declare Sub Main()
+Declare Sub 卸载
+Declare SUb 输入更改标题
+Declare Function GetActiveWindow32 Lib "user32" Alias "GetActiveWindow" () As Integer
+Declare Function GetActiveWindow Lib "User" () as SmallInt
+Declare Function GetWindowText32 Lib "user32" Alias "GetWindowTextA" (ByVal hwnd As Integer ,lpString As String, ByVal cch As Integer) As Integer
+Declare Function GetWindowText Lib "User" (ByVal hWnd As SmallInt, lpString As String, ByVal aInt As SmallInt) As SmallInt
+Declare Function SetWindowText32 Lib "user32" Alias "SetWindowTextA" (ByVal hwnd As Integer, ByVal lpString As String) As Integer
+Declare Sub      SetWindowText Lib "User" (ByVal hWnd As SmallInt, ByVal Str As String)
+Sub Main()
+  Create Menu "更改标题" As
+  "输入更改标题" Calling 输入更改标题,
+  "卸载" Calling 卸载
+  Alter Menu Bar Add "更改标题"
+End Sub
+Sub 卸载
+  Alter Menu Bar Remove "更改标题"
+End Sub
+Sub 输入更改标题
+  Dim sWinText As String
+  Dim n, nWin, nRes As Integer
+  If SystemInfo(SYS_INFO_MIPLATFORM) = MIPLATFORM_WIN32 Then
+    nWin = GetActiveWindow32()
+  ElseIf SystemInfo(SYS_INFO_MIPLATFORM) = MIPLATFORM_WIN16 Then
+    nWin = GetActiveWindow()
+  End If
+  Dialog Title "Enter Text"
+    Control EditText  Position 8,12  value sWinText Into sWinText Width 100
+    Control OKButton
+    Control CancelButton
+  If CommandInfo(CMD_INFO_DLG_OK) Then
+    If SystemInfo(SYS_INFO_MIPLATFORM) = MIPLATFORM_WIN32 Then
+      n = SetWindowText32(nWin, sWinText)
+    ElseIf SystemInfo(SYS_INFO_MIPLATFORM) = MIPLATFORM_WIN16 Then
+      Call SetWindowText(nWin, sWinText)
+    End If
+  End If
+End Sub

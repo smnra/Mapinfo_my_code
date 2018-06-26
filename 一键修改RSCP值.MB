@@ -1,0 +1,206 @@
+include"mapbasic.def"
+include"menu.def"
+include"Icons.def"
+Declare Function Execute Lib  "TestDllCdd.dll" (strpic as string ) As integer
+Declare Sub button_sub
+Declare Sub button_sub1
+Declare Sub button_sub2
+Declare Sub button_sub3
+Declare Sub button_sub4
+Declare Sub button_sub5
+Declare Sub button_sub6
+Declare Sub button_sub7
+Declare Sub Main
+Global s_filename As String
+Global s_tab as String
+Global s_name As String
+Global my_rscp As float
+Global max_rows As Integer
+Global my_object As Object
+Global my_color As Integer
+
+
+
+Sub Main
+
+Create ButtonPad "RSCP"  As
+
+PushButton
+  Icon MI_ICON_OPEN_FILE
+      Calling button_sub
+  HelpMsg "打开tab文件"
+
+PushButton
+  Icon MI_ICON_RULER
+      Calling button_sub1
+  HelpMsg "绿"
+
+
+
+PushButton
+  Icon MI_ICON_RULER
+      Calling button_sub1
+  HelpMsg "蓝"
+
+
+
+PushButton
+  Icon MI_ICON_RULER
+      Calling button_sub1
+  HelpMsg "黄"
+
+
+
+
+PushButton
+  Icon MI_ICON_RULER
+      Calling button_sub1
+  HelpMsg "紫"
+
+
+
+
+PushButton
+  Icon MI_ICON_RULER
+      Calling button_sub1
+  HelpMsg "红"
+
+
+
+
+PushButton
+  Icon MI_ICON_RULER
+      Calling button_sub1
+  HelpMsg "黑"
+
+
+
+
+PushButton
+  Icon MI_ICON_RULER
+      Calling button_sub1
+  HelpMsg "无"
+
+
+
+Title "修改颜色" 
+ToolbarPosition(0,1)
+Width 10
+Show
+
+
+
+
+
+Dim s_searchfor As String
+  Dialog 
+    Title "密码对了你就能用"
+  Control StaticText
+Title "输入密码:"
+  Control EditText
+    Into s_searchfor
+  Control OkButton
+    Title "OK"
+  Control CancelButton
+    Title "Cancel"
+	If CommandInfo(CMD_INFO_DLG_OK) Then
+   		if s_searchfor = "曰你先人" then
+			print("密码正确：" +s_searchfor) 
+			goto goon
+		else
+			print("密码错误：" +s_searchfor) 
+			End Program
+  		End If
+	print("请确认密码！")
+	End Program
+	End If
+goon:
+	'print(s_searchfor)
+End Sub
+
+
+
+
+
+Sub button_sub
+    
+
+	s_filename=FileOpenDlg("","","TAB","Open Table")		'文件选择对话框
+	print(s_filename)
+	Open Table s_filename  as my_tab Interactive				'打开tab文件
+	s_tab = TableInfo(0, TAB_INFO_NAME)			'获得当前打开表的名称
+	max_rows = TableInfo(0, TAB_INFO_NROWS)			'获得当前打开表的行数
+	'Browse * From my_tab						'浏览表哥
+	
+	if TableInfo(0,TAB_INFO_MAPPABLE) then				'判断表格是否可以在地图上显示
+		Map From my_tab						'地图查看
+	else 
+		note "地图不可查看!"
+	end if
+	
+	print("表名：" + s_tab + "行数：" + max_rows)
+End sub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Sub button_sub1
+onerror goto error_trap
+Select Total_RSCP, Longitude, Latitude from my_tab into temp_table
+
+Select Total_RSCP, obj from  temp_table where StyleAttr(ObjectInfo(obj, 2),2)= 65280 into Selection
+Update Selection Set Total_RSCP  =Round(0-(67 + 12 * Rnd (1)),0.01)
+
+
+Select Total_RSCP, obj from temp_table where StyleAttr(ObjectInfo(obj, 2),2)= 65535 into Selection
+Update Selection Set Total_RSCP  =Round(0-(80 + 5 * Rnd (1)),0.01)
+
+
+
+Select Total_RSCP, obj from temp_table where StyleAttr(ObjectInfo(obj, 2),2)= 16776960 into Selection
+Update Selection Set Total_RSCP  =Round(0-(85 + 5 * Rnd (1)),0.01)
+
+
+
+
+Select Total_RSCP, obj from temp_table where StyleAttr(ObjectInfo(obj, 2),2)= 16711935 into Selection
+Update Selection Set Total_RSCP  =Round(0-(90 + 5 * Rnd (1)),0.01)
+
+
+
+Select Total_RSCP, obj from temp_table where StyleAttr(ObjectInfo(obj, 2),2)= 16711680 into Selection
+Update Selection Set Total_RSCP  =Round(0-(95 + 5 * Rnd (1)),0.01)
+
+
+
+
+Select Total_RSCP, obj from temp_table where StyleAttr(ObjectInfo(obj, 2),2)= 0 into Selection
+Update Selection Set Total_RSCP  =Round(0-(100 + 12 * Rnd (1)),0.01)
+
+
+
+Select Total_RSCP, obj from temp_table where StyleAttr(ObjectInfo(obj, 2),2)= 0 into Selection
+Update Selection Set Total_RSCP  =Round(0-(119 + 4 * Rnd (1)),0.01) 
+
+
+done: 
+  exit sub 
+error_trap: 
+   print(error$())
+   resume done 
+end sub
+

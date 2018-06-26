@@ -1,0 +1,77 @@
+include"mapbasic.def"
+include"menu.def"
+include"Icons.def"
+Declare Sub Main
+Declare Sub col_1_name
+Declare Sub button_sub1
+dim col2_name as alias					'定义别名变量  第二列的名称
+dim col3_name as alias					'定义别名变量  第三列的名称	
+Global max_rows As Integer				'定义表的最大行数
+
+Sub Main
+
+	Create ButtonPad "序号"  As
+
+	PushButton
+	  Icon 104
+		  Calling button_sub1
+	  HelpMsg "更改所选择表的第一列为行号"
+
+
+	Title "修改颜色" 
+	ToolbarPosition(0,1)
+	Width 10
+	Show
+
+End Sub
+
+
+Sub col_1_name()
+	col2_name = ColumnInfo(Selection,"col2",COL_INFO_NAME)				'把选择区域  第二列的列名  赋值给 别名变量  col2_name    为自动识别第二列的列名
+	col3_name = ColumnInfo(Selection,"col3",COL_INFO_NAME)				'把选择区域  第三列的列名  赋值给 别名变量  col3_name    为自动识别第三列的列名
+	Select col2_name,col3_name from Selection into temp_table    			'把第二列写入 temp_table  表中
+	
+end sub
+	
+	
+Sub button_sub1
+	onerror goto error_trap
+	call col_1_name()	
+	max_rows = TableInfo(temp_table, TAB_INFO_NROWS)			'获得当前打开第表的总行数
+	dim i as integer	
+		for i=1 to max_rows Step 1
+			fetch rec i from temp_table
+
+			Update temp_table Set col2_name  = i Where RowID = i			'修改表的col2_name列值为i  当行号为i时
+			if i<10 then
+				Update temp_table Set col3_name  = "BJ-W-00" +i Where RowID = i		'修改表的col2_name列值为i  当行号为i时
+			ElseIf i<100 then 	
+					Update temp_table Set col3_name  = "BJ-W-0" +i Where RowID = i			'修改表的col2_name列值为i  当行号为i时
+			ElseIf i>=100 then 	
+					Update temp_table Set col3_name  = "BJ-W-" +i Where RowID = i			'修改表的col2_name列值为i  当行号为i时 
+			end if	
+			
+			
+			
+			
+			
+			
+			print i
+		next 
+		
+	Add Column "圈选图层" (序号 )From 问题点图层 Set To 序号 Where within				'更新圈选图层的序号
+
+	Add Column "问题点解决方案图层" (序号 )From 圈选图层 Set To 序号 Where contains		'更新问题点解决方案图层的序号
+		
+		
+		
+		
+	done: 
+	  exit sub 
+	error_trap: 
+	   print(error$())
+	   resume done 
+end sub
+
+
+

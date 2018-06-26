@@ -1,0 +1,232 @@
+include"mapbasic.def"
+include"menu.def"
+include"Icons.def"
+Declare Sub Main
+Declare Sub col_1_name
+Declare Sub button_sub1
+Declare Sub button_sub2
+Declare Sub button_sub3
+Declare Sub button_sub4
+Declare Sub button_sub5
+dim col1_name as alias					'定义别名变量  第二列的名称
+dim col6_name as alias					'定义别名变量  第三列的名称	
+Global max_rows As Integer				'定义表的最大行数
+
+Sub Main
+
+	Create ButtonPad "序号"  As
+
+	PushButton
+	  Icon 104
+		  Calling button_sub1
+	  HelpMsg "更新 解决方案图层的的 地市,序号,问题点编号,归属网格,场景,问题点经纬度,网格类型 列"
+
+
+	PushButton
+	  Icon 105
+		  Calling button_sub2
+	  HelpMsg "更新 圈选图层 的 各列"
+
+	PushButton
+	  Icon 106
+		  Calling button_sub3
+	  HelpMsg "更新 DT问题点图层 "
+
+	PushButton
+	  Icon 107
+		  Calling button_sub5
+	  HelpMsg "更新投诉图层 "
+
+
+	PushButton
+	  Icon 108
+		  Calling button_sub4
+	  HelpMsg "生成附件4成表 "
+
+
+	Title "宝鸡三滚图层更新工具" 
+	ToolbarPosition(0,1)
+	Width 10
+	Show
+
+End Sub
+
+
+
+
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub button_sub1				'此sub为更新 解决方案图层 各列
+	onerror goto error_trap
+
+	max_rows = TableInfo(解决方案图层, TAB_INFO_NROWS)			'获得解决方案图层表的总行数
+	Add Column "解决方案图层" (归属场景 )From 宝鸡_行政区划分 Set To NAME Where contains 	'更新 解决方案图层 的"归属场景"列
+	Add Column "解决方案图层" (归属子场景 )From 宝鸡_行政区划分 Set To NAME Where contains 	'更新 解决方案图层 的"归属子场景"列
+	
+	
+	dim i as integer	
+		for i=1 to max_rows Step 1								'更新 解决方案图层 的"序号"列 为"编号" 列
+  			fetch rec i from 解决方案图层
+
+			Update 解决方案图层 Set 序号  = i Where RowID = i			'修改 解决方案图层 的序号列值为i  当行号为i时
+			if i<10 then
+				Update 解决方案图层 Set 编号  = "BJ-W-00" +i Where RowID = i		'修改解决方案图层表的问题点编号列值为i  当行号为i时
+			ElseIf i<100 then 	
+					Update 解决方案图层 Set 编号  = "BJ-W-0" +i Where RowID = i			'修改解决方案图层表的问题点编号列值为i  当行号为i时
+			ElseIf i>=100 then 	
+					Update 解决方案图层 Set 编号  = "BJ-W-" +i Where RowID = i			'修改解决方案图层表的问题点编号列值为i  当行号为i时 
+			end if	
+
+			if 解决方案图层.归属场景 = "宝鸡市" then							'更新 解决方案图层 的"归属场景"列 的值为 "市区"  和 "县城"
+																			'更新 解决方案图层 的"归属子场景"列 的值为 "市区"  和 县城的名字
+				Update 解决方案图层 Set 归属场景 = "市区" Where RowID = i
+				Update 解决方案图层 Set 归属子场景 = "市区" Where RowID = i
+			else
+				Update 解决方案图层 Set 归属场景  = "县城" Where RowID = i
+			end if
+						
+			if	解决方案图层.解决方案 = "网优解决" then
+				Update 解决方案图层 Set 责任部门 = "优化处理" Where RowID = i				'更新 解决方案图层 的"责任部门"列 				
+			elseIf 解决方案图层.解决方案 = "新建宏站" then
+				Update 解决方案图层 Set 责任部门 = "建设处理" Where RowID = i				'更新 解决方案图层 的"责任部门"列 				
+			else 
+				Update 解决方案图层 Set 责任部门 = "建设处理" Where RowID = i				'更新 解决方案图层 的"责任部门"列 								
+			end if
+			print i
+		next 
+		
+	Update 解决方案图层 Set 省分 = "陕西"	
+	Update 解决方案图层 Set 地市 = "宝鸡"												'更新 解决方案图层 的"地市"列 为"宝鸡"
+	Add Column "解决方案图层" (归属网格名称_编号 )From 物理网格_宝鸡 Set To 网格编号 Where contains		'更新 解决方案图层 的"归属网格名称_编号"列 
+	Add Column "解决方案图层" (归属网格属性 )From 物理网格_宝鸡 Set To 网格类型 Where contains		'更新 解决方案图层 的"归属网格属性"列
+	'Add Column "解决方案图层" (归属场景 )From 物理网格_宝鸡 Set To 主覆盖场景 Where contains		'更新 解决方案图层 的"归属场景"列 		此条已废除
+	Update 解决方案图层 Set 经度  = Round(CentroidX(obj),0.00001)							'更新 解决方案图层 的"经度"列 
+	Update 解决方案图层 Set 纬度  = Round(CentroidY(obj),0.00001)							'更新 解决方案图层 的"纬度"列 
+	Update 解决方案图层 Set 问题类型 = "室外弱覆盖"											'更新 解决方案图层 的"问题类型"列 
+	Update 解决方案图层 Set 网络类型 = "U2100"											'更新 解决方案图层 的"问题类型"列 	
+
+	done: 
+	  exit sub 
+	error_trap: 
+	   print(error$())
+	   resume done 
+end sub
+
+
+	
+
+
+
+
+
+''''''''''''''''''''''''''''''''''''
+Sub button_sub2					'此sub为更新圈选图层
+	onerror goto error_trap
+
+	Add Column "圈选图层" (序号 )From 解决方案图层 Set To 序号 Where within		'更新圈选图层的序号
+	Update 圈选图层 Set 面积 = Area(obj, "sq m")									'更新圈选图层 面积 列
+	Add Column "圈选图层" (问题点名称 )From 解决方案图层 Set To 问题点名称_编号 Where within		'更新圈选图层 问题点名称 列
+	Add Column "圈选图层" (归属场景 )From 解决方案图层 Set To 归属场景 Where within			'更新圈选图层 归属场景 列
+	Add Column "圈选图层" (解决方案 )From 解决方案图层 Set To 解决方案 Where within			'更新圈选图层 解决方案 列
+
+	
+	Add Column "圈选图层" (MR弱覆盖 )From MR图层 Set To Count(*) Where within			'更新圈选图层 "MR弱覆盖" 列
+	Add Column "圈选图层" (DT )From 解决方案图层 Set To Count(*) Where within					'更新圈选图层 "投诉" 列
+	Add Column "圈选图层" (投诉 )From 投诉图层 Set To Count(*) Where within					'更新圈选图层 "投诉" 列
+	
+	Update 圈选图层 Set CQT = 0																'更新圈选图层 "CQT" 列
+	Select * from 圈选图层 where 对应的聚类场景和深度覆盖“问题<>"" into tmpTable			'更新圈选图层 "CQT" 列
+	Update tmpTable Set CQT = 1																'更新圈选图层 "CQT" 列
+	Select * from 圈选图层 where 对应的投诉“热点区域名称”<>"" into tmpTable					'更新圈选图层 "CQT" 列
+	Update tmpTable Set CQT = 1
+	
+	Select * from 圈选图层 where 解决方案="新建室分" into tmpTable
+	Update tmpTable Set DT = 0
+	Update tmpTable Set CQT = 1
+
+	
+	Add Column "圈选图层" (新建宏站数量 )From 解决方案图层 Set To 解决方案 = "新建宏站" Where within			'更新圈选图层 "新建宏站数量" 列
+	Add Column "圈选图层" (网优解决数量 )From 解决方案图层 Set To 解决方案 = "网优解决" Where within 				'更新圈选图层 "网优解决数量" 列
+	Add Column "圈选图层" (新建宏站数量 )From 解决方案图层 Set To 解决方案 = "新建宏站" Where within			'更新圈选图层 "新建宏站数量" 列
+	Add Column "圈选图层" (新建室分数量 )From 解决方案图层 Set To 解决方案 = "新建室分" Where within			'更新圈选图层 "新建室分数量" 列
+	
+
+
+	done: 
+	  exit sub 
+	error_trap: 
+	   print(error$())
+	   resume done 
+end sub
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+
+
+
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''	
+Sub button_sub3							'此sub为更新DT问题点图层各列
+	onerror goto error_trap
+	
+	Add Column "DT问题点图层" (序号 )From 圈选图层 Set To 序号 Where contains				'更新 DT问题点图层 的"序号"列
+	Update DT问题点图层 Set 经度  = Round(CentroidX(obj),0.00001)							'更新 DT问题点图层 的"经度"列 
+	Update DT问题点图层 Set 纬度  = Round(CentroidY(obj),0.00001)							'更新 DT问题点图层 的"纬度"列 
+	Add Column "DT问题点图层" (场景 )From 圈选图层 Set To 归属场景 Where contains			'更新 DT问题点图层 的"归属场景"列
+
+	done: 
+	  exit sub 
+	error_trap: 
+	   print(error$())
+	   resume done 
+end sub
+'''''''''''''''''''''''''''''''''''''''''''''''''
+
+
+
+
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''	
+Sub button_sub5							'此sub为更新投诉图层各列
+	onerror goto error_trap
+	Add Column "投诉图层" (序号 )From 圈选图层 Set To 序号 Where contains									'更新 投诉图层的 对应的序号  列 
+	Select * from 圈选图层 where 对应的投诉“热点区域名称”<>"" into tmpTable									'更新 投诉图层的 对应的投诉“热点区域名称”  列 
+	Add Column "投诉图层" (热点区域名称 )From tmpTable Set To 对应的投诉“热点区域名称” Where contains		'更新 投诉图层的 对应的投诉“热点区域名称”  列 
+	
+	Add Column "投诉图层" (场景 )From 物理网格_宝鸡 Set To 主覆盖场景 Where contains						'更新 投诉图层的 场景  列
+	
+	Update 投诉图层 Set 经度  = Round(CentroidX(obj),0.00001)							'更新 投诉图层 的"经度"列 
+	Update 投诉图层 Set 纬度  = Round(CentroidY(obj),0.00001)							'更新 投诉图层 的"纬度"列 
+	Add Column "投诉图层" (已纳入三滚的关联名称 )From 圈选图层 Set To 问题点名称 Where contains			'更新 投诉图层 的"已纳入三滚的关联名称"列
+
+	done: 
+	  exit sub 
+	error_trap: 
+	   print(error$())
+	   resume done 
+end sub
+'''''''''''''''''''''''''''''''''''''''''''''''''
+
+
+
+
+
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''	
+Sub button_sub4						'此sub为生成附件4 成表
+	onerror goto error_trap
+	
+									'此sub为生成附件4 成表
+	Select 解决方案图层.序号, 解决方案图层.编号, 解决方案图层.省分, 解决方案图层.地市, 解决方案图层.问题点名称_编号, 解决方案图层.归属网格名称_编号, 解决方案图层.归属网格属性, 解决方案图层.归属场景, 解决方案图层.归属子场景, 解决方案图层.经度, 解决方案图层.纬度, 圈选图层.MR弱覆盖, 圈选图层.DT, 圈选图层.投诉, 圈选图层.CQT, 圈选图层.网优解决数量, 圈选图层.新建宏站数量, 圈选图层.新建室内外一体化数量, 圈选图层.新建室分数量, 圈选图层.项目来源, 圈选图层.对应的聚类场景和深度覆盖“问题, 圈选图层.对应的投诉“热点区域名称”, 圈选图层.备注 from 解决方案图层, 圈选图层 where 解决方案图层.obj Within 圈选图层.obj into Selection
+	Browse * From Selection
+
+	done: 
+	  exit sub 
+	error_trap: 
+	   print(error$())
+	   resume done 
+end sub
+'''''''''''''''''''''''''''''''''''''''''''''''''
+
+
+
+

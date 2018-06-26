@@ -1,0 +1,194 @@
+'****************************************************************************
+'  trkdlg.mb   
+'
+' 	Module to display and handle the GPS tracking setup dialog 
+'
+'	Created: 	23 Jun 1995	
+'
+'	Copyright (c) 1995 Blue Marble Geographics, Inc. All Rights Reserved. 
+'
+'  This source code is supplied without warranty and is intended as
+'  sample source code for enabling the use of GPS from within MapInfo.
+'****************************************************************************
+
+Include "mapbasic.def"
+Include "geotrack.def"
+
+Declare Sub SetTrackType	'sets the GPS tracking to point mode or poly mode
+Declare Sub SetTolType		'for tolerance status, set the other controls 
+Declare Sub SetUpTracking	'initialize the point and polyline for tracking
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'TrackingDLG -- sets up the tracking dialog
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub TrackingDLG
+
+	Dim l_Halt As Integer 		'local halt variable
+
+	l_Halt = Halt 	  		'retain the tracking status
+	Halt = 1				'halt tracking
+
+	Call ChkMapWindows		'trkui.mb, sets the g_sMappable string (avail. tracking windows)
+
+	If g_sMappable <> "" Then
+
+		Dialog
+			Calling SetTrackType 			'set up dialog's initial settings 
+			Title "Setup GPS Tracking" 
+			Height 190 Width 143 Position 60,80
+''''''
+		Control GroupBox					
+			Title "Tracking Window"
+			Position 12,5
+			Height 38 Width 123
+
+		Control PopupMenu
+			Position 20,20 Width 105
+			ID UI_PU_TRACKINGWINDOW			
+			Value g_trkSelWndIndex			'index to tracking window
+			Into g_trkSelWndIndex	
+'			Calling SetGPSMapWindow			
+			Title g_sMappable				'";" delimeted string of trackable windows 
+''''''
+		Control GroupBox		
+			Title "Track Type"
+			Position 12,47
+			Height 60 Width 123
+
+		Control RadioGroup 				'type of tracking point/polyline
+			Position 30, 67
+			ID UI_RG_TRACKTYPE
+			Calling SetTrackType
+			Title "&Symbol;&Polyline"
+			Value g_iTrack
+			Into g_iTrack
+			
+		Control SymbolPicker				'define point tracking symbol type
+			Position 107, 57
+			ID UI_SP_TRACKSYMBOL
+			Value g_tkSymbol
+			Into g_tkSymbol
+
+		Control PenPicker					'define polyline tracking pen type
+			Position 107, 82 
+			ID UI_PP_TRACKPEN
+			Value g_tkPen
+			Into g_tkPen
+
+		Control GroupBox
+			Title "Tolerances"
+			Position 12, 115
+			Height 45 Width 123
+
+		Control CheckBox					'enable/disable the distance tolerance
+			Position 20,130
+			ID UI_CB_DISTANCE
+			Calling SetTolType
+			Title "&Distance(meters)" 
+			Value g_bDist
+			Into g_bDist
+
+		Control EditText					'specify the distance tolerance
+			Position 88,130 Width 40
+			ID UI_ET_DISTANCETOL
+			Value g_sTolDist
+			Into g_sTolDist
+
+		Control OKButton
+			Calling SetupTracking			'accept changes
+			Position 33, 168
+
+		Control CancelButton				'reject changes
+			Position 77, 168
+	Else
+		Note "At least one Map Window must be open to setup tracking."
+		'l_Halt = 1 'since no open map windows then set Halt to 1
+	End if
+
+	Halt = l_Halt 						'reset to previous value
+End Sub
+
+'**************************************************************************
+'SetTrackType -- sets the track to point/polyline disables invalid controls
+'**************************************************************************
+Sub SetTrackType
+
+	Dim nWindows, i As Integer
+
+	nWindows = NumWindows()					
+	For i = 1 To nWindows
+		If WindowID(i) = g_trkSelWndID Then
+			g_trkSelWndIndex = i
+		End If
+	Next
+
+	Do Case ReadControlValue(UI_RG_TRACKTYPE)
+		Case 1						'symbol selected
+			Alter Control UI_SP_TRACKSYMBOL 	'enable Symbol Picker
+				Enable
+			Alter Control UI_PP_TRACKPEN		'disable Pen Picker
+				Disable	
+			Alter Control UI_CB_DISTANCE		'uncheck the distance tolerance
+				Value False
+			Alter Control UI_CB_DISTANCE		'disable the disance tolerance
+				Disable
+				
+		Case 2						'polyline selected	
+			Alter Control UI_SP_TRACKSYMBOL 	'disable Symbol Picker
+				Disable
+			Alter Control UI_PP_TRACKPEN		'enable Pen Picker
+				Enable		
+			Alter Control UI_CB_DISTANCE		'enable the distance tolerance 
+				Enable
+		End Case
+
+	If g_bDist = False Then
+		Alter Control UI_ET_DISTANCETOL		'disable the tolerance edit box
+			Disable
+	Else 
+		Alter Control UI_ET_DISTANCETOL
+			Enable					'enable the tolerance edit box
+	End If
+End Sub
+
+'**************************************************************************
+'SetTolType - enable/disable on selection alone
+'**************************************************************************
+Sub SetTolType
+
+	Do Case ReadControlValue(UI_CB_DISTANCE)
+		Case True 							' distance tolerance checked
+			Alter Control UI_ET_DISTANCETOL		' enable distance Editbox
+				Enable	
+		Case False							' distance tolerance not checked
+			Alter Control UI_ET_DISTANCETOL		' disable distance EditBox
+				Disable			
+	End Case
+End Sub
+
+'**************************************************************************
+'SetUpTracking -- initializes the point and polyline objects for tracking
+'**************************************************************************
+Sub SetUpTracking
+
+	Dim nWindows, nLayers, i, j As Integer 
+
+'	nWindows = NumWindows()
+'	For i = 1 To nWindows
+'		If WindowInfo(WindowID(i),WIN_INFO_TYPE) = WIN_MAPPER Then
+'			Remove Map Window WindowID(i) Layer Animate	'trouble here w/MapInfo animate
+'		End If
+'	Next  	
+
+'	if g_trkSelWndId <> 0 then
+'		Remove Map Window g_trkSelWndID Layer Animate
+'	end if 
+
+	Call SetGPSMapWindow
+
+'	If ReadControlValue(UI_RG_TRACKTYPE) = 2 Then	'pline selected					
+'		Call ReInitPoint	
+'	End If
+'	Call ReInitPLine								'initialize polylne track
+
+End Sub

@@ -1,0 +1,37 @@
+Blue Marble Geographics
+Application Software License Agreement
+
+READ THE FOLLOWING TERMS AND CONDITIONS CAREFULLY.
+
+Acceptance
+
+You acknowledge that this agreement is the complete and exclusive agreement between Blue Marble Geographics and you relating to the licensed product and that the agreement supersedes any other agreements, proposals, discussions, and other communications, oral or written, relating to the licensed product.
+
+License
+
+Blue Marble Geographics grants to you a nontransferable, personal, non-exclusive license to use this software and documentation (together, the "Licensed Product") on a single computer in accordance with the terms and conditions of this Agreement.  All rights in and to the Licensed Product, including, but not limited to, copyrights and trade secrets, belong to Blue Marble Geographics, and Blue Marble Geographics holds title to each copy of the software.  You must not copy, modify, or transfer the Licensed Product, except as expressly provided in this Agreement.  You may copy this software solely for backup and archival purposes, provided that all copyright and other notices are reproduced and included on the backup/archival copy.  You agree not to disclose to anyone any confidential or proprietary information contained in this software.  The software is delivered in object code only.  You shall not reverse compile or otherwise reverse engineer the software.
+
+Term
+
+The license is effective until terminated in accordance with this agreement.  You may terminate the license at any time by returning the Licensed Product to Blue Marble Geographics.  Additionally, the license will terminate if you fail to comply with any of the terms and conditions of this Agreement.  You agree to return to Blue Marble Geographics or destroy the Licensed Product upon any termination of the license.  All other terms and conditions of this Agreement, including, without limitation, provisions relating to disclaimers of warranties, limitations of liability, remedies or damages, and Blue Marble Geographics' proprietary rights, shall survive any termination of the license.
+
+Limited Warranty
+
+Blue Marble Geographics does not warrant that the information in this software will be accurate, or that your system will operate without interruption.  Blue Marble Geographics does warrant that this software will be free from defects in material and workmanship for thirty (30) days after the date of purchase.  Your exclusive remedy and Blue Marble Geographics' sole responsibility is replacement of the defective software, provided you return it with dated proof of payment within (30) days of your purchase.
+
+EXCEPT AS PROVIDED ABOVE, THE LICENSED PRODUCT IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE, AND THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE LICENSED PRODUCT IS WITH YOU.
+
+IN NO EVENT WILL BLUE MARBLE GEOGRAPHICS, ITS DISTRIBUTORS, OR AFFILIATES BE LIABLE TO YOU OR ANY OTHER THIRD PARTY FOR ANY DIRECT DAMAGES IN EXCESS OF AMOUNTS PAID FOR THIS SOFTWARE, OR FOR ANY INDIRECT, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES, INCLUDING, WITHOUT LIMITATION, ANY LOSS OF DATA, LOSS OF PROFITS, OR LOST SAVINGS, ARISING OUT OF THE USE OF OR INABILITY TO USE THE LICENSED PRODUCT, EVEN IF AN AUTHORIZED REPRESENTATIVE OF BLUE MARBLE GEOGRAPHICS HAS BEEN ADVISED OF THE POSSIBILITIES OR LIKELIHOOD OF SAME.
+
+Some states do not allow the exclusion of implied warranties, so the above exclusion may not apply to you.  This warranty gives you specific rights, and you may also have other rights which vary from state to state. 
+
+General
+
+In the case of United States Government or an agency thereof as Licensee, the following additional terms apply.  Restricted Computer software, as defined in the Rights in Data-General clause at Federal Acquisition Regulations 52.227-14; and as applicable.
+
+Restricted Rights Legend
+
+Use, duplication, or disclosure by the Government is subject to restrictions as set forth in subparagraphs (c)(1)(ii) of the Rights in Technical Data and Computer Software clause at DFARS 252.227-7013.
+
+This Agreement shall be governed by the laws of the State of Maine.  You may not assign, transfer, or otherwise convey your rights or duties under this Agreement, and any such assignment, transfer, or conveyance is void and of no force or effect.
+

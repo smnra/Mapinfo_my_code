@@ -1,0 +1,118 @@
+include"mapbasic.def"
+include"menu.def"
+include"Icons.def"
+Declare Function Execute Lib  "TestDllCdd.dll" (strpic as string ) As integer
+Declare Sub button_sub1
+Declare Sub button_sub2
+Declare Sub button_sub3
+Declare Sub button_sub4
+Declare Sub button_sub5
+Declare Sub button_sub6
+Declare Sub button_sub7
+Declare Sub Main
+Global s_filename As String
+Global s_tab as String
+Global s_name As String
+Global my_rscp As float
+
+
+
+
+
+Sub Main
+
+Create ButtonPad "RSCP"  As
+
+PushButton
+  Icon 104
+      Calling button_sub1
+  HelpMsg "绿色，Total_RSCP >-80dBm"
+
+
+Title "修改颜色" 
+ToolbarPosition(0,1)
+Width 10
+Show
+
+
+
+Dim s_searchfor As String
+  Dialog 
+    Title "密码对了你就能用"
+  Control StaticText
+Title "输入密码:"
+  Control EditText
+    Into s_searchfor
+  Control OkButton
+    Title "OK"
+  Control CancelButton
+    Title "Cancel"
+	If CommandInfo(CMD_INFO_DLG_OK) Then
+   		if s_searchfor <> "曰你先人" then
+			print("密码正确：" +s_searchfor) 
+			goto goon
+		else
+			print("密码错误：" +s_searchfor) 
+			End Program
+  		End If
+	print("请确认密码！")
+	End Program
+	End If
+goon:
+	'print(s_searchfor)
+End Sub
+
+
+
+
+
+
+
+Sub button_sub1
+	onerror goto error_trap
+	dim max_rows as Integer
+	dim i as Integer
+	Dim symbol_Green As Symbol
+	symbol_Green = MakeSymbol(44, 44444, 20)
+	dim myrscp_Value as float
+	dim my_color as Integer
+	dim temp_object as object
+	dim select_object as object
+	Select *  from 宝鸡_农村点 into Selection
+	Select *,obj  from Selection where  into temp_table
+	temp_object = temp_table.obj
+	Set Style Symbol MakeSymbol(44, 44444, 20)
+	max_rows = TableInfo(temp_table, TAB_INFO_NROWS)
+	dim lalels_name as string
+	dim text_X 
+	dim text_Y
+	
+	
+	for i=1 to max_rows Step 1
+			fetch rec i from temp_table
+			'text_X = StyleAttr(ObjectInfo(temp_object, 2),2)	'当前行对应的对象的颜色值
+			text_X = CentroidX(temp_object)
+			text_Y = CentroidY(temp_object)
+			lalels_name = temp_table.col(2)		
+
+ Create Text into Window Frontwindow() lalels_name(text_X,text_Y)(text_X+0.03478,text_Y-0.001299) Font MakeFont("Helvetica", 1, 12, 255, 65535)
+
+
+			
+	next
+
+	done: 
+	  exit sub 
+	error_trap: 
+	   print(error$())
+	   resume done 
+end sub
+
+
+
+
+
+
+
+
+

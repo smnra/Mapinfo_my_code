@@ -1,0 +1,67 @@
+select * from builds where code="2109" into Seion  '设置自己的条件，我的是这个啦！
+
+for i=1 to rectotal
+select * from Seion where rowid=i into Seion1 ’小弟初学，只会用这种方法选择一个对像
+newobj=Seion1.obj
+alter object newobj info OBJ_INFO_BRUSH,b_fillstyle 
+update Seion1 set obj=newobj where rowid=1  ‘因为设置好一个对像之后（新建的对像），只能更新一个相应对像，不然多个对像都会变成这一个对像。
+next
+
+
+	Select WCDMA_Total_RSCP, Longitude, Latitude,obj  from WCDMA_Total_RSCP into Selection
+	Select WCDMA_Total_RSCP, Longitude, Latitude,obj  from Selection where WCDMA_Total_RSCP < -10 and WCDMA_Total_RSCP >= -80 into temp_table
+	temp_object = temp_table.obj
+	Set Style Symbol MakeSymbol(44, 44444, 20)
+	max_rows = TableInfo(temp_table, TAB_INFO_NROWS)
+	
+	
+	
+	for i=1 to max_rows Step 1
+			fetch rec i from temp_table
+			my_color = StyleAttr(ObjectInfo(temp_object, 2),2)	'当前行对应的对象的颜色值
+			myrscp_Value = Selection.col(1)						'当前行对应的rscp列的值	
+	
+	do case myrscp_Value
+			case myrscp_Value < -10 and myrscp_Value >= -80	
+
+						Select WCDMA_Total_RSCP, Longitude, Latitude,obj from  temp_table where ROWID = i into Selec_1
+						select_object =Selec_1.obj						
+						Alter Object  select_object  Info OBJ_INFO_SYMBOL, symbol_Green
+						update Selec_1 set obj=select_object 
+						print("111--" + i )
+				
+			case Else
+				print("第" + i + "行颜色值不在统计范围内！    " +my_color )		
+			end case		
+					
+					
+					
+		
+			
+	next
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

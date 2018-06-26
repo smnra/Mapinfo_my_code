@@ -1,0 +1,239 @@
+include"mapbasic.def"
+include"menu.def"
+include"Icons.def"
+Declare Function Execute Lib  "TestDllCdd.dll" (strpic as string ) As integer
+Declare Sub col_1_name
+Declare Sub button_sub1
+Declare Sub button_sub2
+Declare Sub button_sub3
+Declare Sub button_sub4
+Declare Sub button_sub5
+Declare Sub button_sub6
+Declare Sub button_sub7
+Declare Sub Main
+Global s_filename As String
+Global s_tab as String
+Global s_name As String
+Global my_rscp As float
+
+
+dim col1_name as alias
+
+
+Sub Main
+
+Create ButtonPad "RSCP"  As
+
+PushButton
+  Icon 104
+      Calling button_sub1
+  HelpMsg "绿色，Total_RSCP >-80dBm"
+
+
+
+PushButton
+  Icon 109
+      Calling button_sub2
+  HelpMsg "蓝色，-85dBm>Total_RSCP >-80dBm "
+
+
+
+PushButton
+  Icon 122
+      Calling button_sub3
+  HelpMsg "黄色，-90dBm>Total_RSCP >-85dBm "
+
+
+
+
+PushButton
+  Icon 123
+      Calling button_sub4
+  HelpMsg "红色，-95dBm>Total_RSCP >-90dBm "
+
+
+
+
+PushButton
+  Icon 99
+      Calling button_sub5
+  HelpMsg "黑色，-100dBm>Total_RSCP >-95dBm "
+
+
+
+
+PushButton
+  Icon 99
+      Calling button_sub6
+  HelpMsg "黑色，-110dBm>Total_RSCP >-100dBm "
+
+
+
+
+PushButton
+  Icon 99
+      Calling button_sub7
+  HelpMsg "黑色，Total_RSCP 在-120dBm左右 "
+
+
+
+Title "修改颜色" 
+ToolbarPosition(0,1)
+Width 10
+Show
+
+
+
+
+
+Dim s_searchfor As String
+  Dialog 
+    Title "密码对了你就能用"
+  Control StaticText
+Title "输入密码:"
+  Control EditText
+    Into s_searchfor
+  Control OkButton
+    Title "OK"
+  Control CancelButton
+    Title "Cancel"
+	If CommandInfo(CMD_INFO_DLG_OK) Then
+   		if s_searchfor <> "曰你先人" then
+			print("密码正确：" +s_searchfor) 
+			goto goon
+		else
+			print("密码错误：" +s_searchfor) 
+			End Program
+  		End If
+	print("请确认密码！")
+	End Program
+	End If
+goon:
+	'print(s_searchfor)
+End Sub
+
+
+
+Sub col_1_name()
+
+	col1_name = ColumnInfo(Selection,"col1",COL_INFO_NAME)				'把选择区域  第一列的列名  赋值给 别名变量  col1_name    为自动识别第一列的列名
+
+	Select col1_name, Longitude, Latitude from Selection into temp_table    			'把第一、二、三列写入 temp_table  表中
+
+
+end sub
+
+
+
+Sub button_sub1
+onerror goto error_trap
+call col_1_name()
+
+
+Select col1_name, Longitude, Latitude, obj from  temp_table where StyleAttr(ObjectInfo(obj, 2),2)= 65280 into Selection
+Update Selection Set col1_name  =Round(0-(67 + 12 * Rnd (1)),0.01)
+Update Selection Set Longitude  =CentroidX(obj)
+Update Selection Set Latitude  =CentroidY(obj)
+done: 
+  exit sub 
+error_trap: 
+   print(error$())
+   resume done 
+end sub
+
+
+
+Sub button_sub2
+onerror goto error_trap
+
+Select col1_name,  Longitude, Latitude, obj from temp_table where StyleAttr(ObjectInfo(obj, 2),2)= 255 into Selection
+Update Selection Set col1_name  =Round(0-(80 + 5 * Rnd (1)),0.01)
+Update Selection Set Longitude  =CentroidX(obj)
+Update Selection Set Latitude  =CentroidY(obj)
+done: 
+  exit sub 
+error_trap: 
+   print(error$())
+   resume done 
+end sub
+
+
+
+Sub button_sub3
+onerror goto error_trap
+Select col1_name,  Longitude, Latitude, obj from temp_table where StyleAttr(ObjectInfo(obj, 2),2)= 16776960 into Selection
+Update Selection Set col1_name  =Round(0-(85 + 5 * Rnd (1)),0.01)
+Update Selection Set Longitude  =CentroidX(obj)
+Update Selection Set Latitude  =CentroidY(obj)
+done: 
+  exit sub 
+error_trap: 
+   print(error$())
+   resume done 
+end sub
+
+
+
+Sub button_sub4
+onerror goto error_trap
+Select col1_name,  Longitude, Latitude, obj from temp_table where StyleAttr(ObjectInfo(obj, 2),2)=  16711680 into Selection
+Update Selection Set col1_name  =Round(0-(90 + 5 * Rnd (1)),0.01)
+Update Selection Set Longitude  =CentroidX(obj)
+Update Selection Set Latitude  =CentroidY(obj)
+done: 
+  exit sub 
+error_trap: 
+   print(error$())
+   resume done 
+end sub
+
+
+
+Sub button_sub5
+onerror goto error_trap
+Select col1_name,  Longitude, Latitude, obj from temp_table where StyleAttr(ObjectInfo(obj, 2),2)= 0 into Selection
+Update Selection Set col1_name  =Round(0-(95 + 5 * Rnd (1)),0.01)
+Update Selection Set Longitude  =CentroidX(obj)
+Update Selection Set Latitude  =CentroidY(obj)
+done: 
+  exit sub 
+error_trap: 
+   print(error$())
+   resume done 
+end sub
+
+
+
+Sub button_sub6
+onerror goto error_trap
+Select col1_name,  Longitude, Latitude, obj from temp_table where StyleAttr(ObjectInfo(obj, 2),2)= 0 into Selection
+Update Selection Set col1_name  =Round(0-(100 + 12 * Rnd (1)),0.01)
+Update Selection Set Longitude  =CentroidX(obj)
+Update Selection Set Latitude  =CentroidY(obj)
+done: 
+  exit sub 
+error_trap: 
+   print(error$())
+   resume done 
+end sub
+
+
+
+Sub button_sub7
+onerror goto error_trap
+Select col1_name,  Longitude, Latitude, obj from temp_table where StyleAttr(ObjectInfo(obj, 2),2)= 0 into Selection
+Update Selection Set col1_name  =Round(0-(119 + 4 * Rnd (1)),0.01)
+Update Selection Set Longitude  =CentroidX(obj)
+Update Selection Set Latitude  =CentroidY(obj)
+done: 
+  exit sub 
+error_trap: 
+   print(error$())
+   resume done 
+
+end sub
+
+
+
+
+

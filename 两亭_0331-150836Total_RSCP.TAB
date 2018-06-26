@@ -1,0 +1,15 @@
+!table
+!version 300
+!charset WindowsSimpChinese
+
+Definition Table
+  Type NATIVE Charset "WindowsSimpChinese"
+  Fields 3
+    Total_RSCP Float ;
+    Longitude Float ;
+    Latitude Float ;
+begin_metadata
+"\IsReadOnly" = "FALSE"
+"\MapInfo" = ""
+"\MapInfo\TableID" = "c6a89d63-2851-43d1-b9dc-e5999c17783c"
+end_metadata

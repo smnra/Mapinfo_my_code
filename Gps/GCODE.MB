@@ -1,0 +1,354 @@
+'**************************************************************************
+'  gcode.mb 
+'
+'	Module to handle geocoding functionality 
+'
+'	Created:	3 Jul 1995 
+'
+'	Copyright (c) 1995 Blue Marble Geographics, Inc. All Rights Reserved.
+'
+'  This source code is supplied without warranty and is intended as
+'  sample source code for enabling the use of GPS from within MapInfo.
+'**************************************************************************
+
+Include "mapbasic.def"
+Include "geotrack.def"
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'SymGeocode -- point geocoding
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub SymGeocode
+
+	Dim colName as String
+	Dim colNum as Integer
+	Dim colType as Integer
+	Dim nRows as Integer
+	Dim gcPoint as Object			'geocode point object
+	Dim tableNum as integer
+	Dim ntables as Integer
+	Dim i as integer
+	Dim bValidgcTable as logical
+
+	OnError Goto SymGeocodeErr
+
+	ntables = NumTables()
+	bValidgcTable = False
+
+	For i = 1 To ntables 
+		If StringCompare(TableInfo(i, TAB_INFO_NAME), g_gcSelTblName) = 0 Then
+			g_gcSelTblIndex = i
+			bValidgcTable = True
+		End If
+	Next
+
+	If bValidgcTable = false Then
+		Note "Invalid Geocode Table, please check your geocode settings."
+		g_gcSelTblIndex = 0 
+		g_gcSelTblName = ""
+		Exit Sub
+	End If
+
+	If TableInfo(g_gcSelTblName, TAB_INFO_MAPPABLE) Then
+		'create a new point variable
+		Create Point Into Variable gcPoint
+			(g_fLon,g_fLat)
+			Symbol g_gcSymbol
+		Insert Into g_gcSelTblName (obj)
+			Values (gcPoint)
+
+		nRows = TableInfo(g_gcSelTblName, TAB_INFO_NROWS)
+	Else 
+		Note "Geocode table must be a " + Chr$(34) + "Mappable" + Chr$(34) + " table. Please check your geocoding settings."
+		Exit Sub
+	End If
+
+'---- insert the latitude value 
+	If g_iLat <> 1 Then
+		colNum = g_iLat-1
+		colName = ColumnInfo(g_gcSelTblName, "COL"+ str$(colNum), COL_INFO_NAME)
+		colType = ColumnInfo(g_gcSelTblName, "COL"+ str$(colNum), COL_INFO_TYPE)
+	
+		If colType = COL_TYPE_CHAR Then
+			Update g_gcSelTblName Set colname = Format$(g_fLat, "##.#############") 
+				Where  RowID = nRows
+		Elseif colType = COL_TYPE_FLOAT Then
+			Update g_gcSelTblName Set colname = g_fLat 
+				Where  RowID = nRows
+		Else 
+			Note "Incompatible column type definition for " + Chr$(34) + "Latitude" + Chr$(34) 
+		End If	
+	End If
+
+'---- insert the longitude value
+	If g_iLon <> 1 Then
+		colNum = g_iLon-1
+		colName = ColumnInfo(g_gcSelTblName, "COL"+ str$(colNum), COL_INFO_NAME)
+		colType = ColumnInfo(g_gcSelTblName, "COL"+ str$(colNum), COL_INFO_TYPE)
+	 
+		If colType = COL_TYPE_CHAR Then
+			Update g_gcSelTblName Set colname = Format$(g_fLon, "##.#############")
+				Where  RowID = nRows
+		Elseif colType = COL_TYPE_FLOAT Then
+			Update g_gcSelTblName Set colname = g_fLon 
+				Where  RowID = nRows
+		Else 
+			Note "Incompatible column type definition for " + Chr$(34) + "Longitude" + Chr$(34) 
+		End If	
+	End If
+
+'---- insert the elev value
+	If g_iElev <> 1 Then
+		colNum = g_iElev-1
+		colName = ColumnInfo(g_gcSelTblName, "COL"+ str$(colNum), COL_INFO_NAME)
+		colType = ColumnInfo(g_gcSelTblName, "COL"+ str$(colNum), COL_INFO_TYPE)
+	
+		If colType = COL_TYPE_CHAR Then
+			Update g_gcSelTblName Set colname = Format$(g_fGeoidElev, "#.###") 
+				Where  RowID = nRows
+		Elseif colType = COL_TYPE_FLOAT Then
+			Update g_gcSelTblName Set colname = g_fGeoidElev
+			Where  RowID = nRows
+		Elseif colType = COL_TYPE_INTEGER Then
+			Update g_gcSelTblName Set colname = Fix(g_fGeoidElev) 
+				Where  RowID = nRows
+		Else 
+			Note "Incompatible column type definition for " + Chr$(34) + "Elevation" + Chr$(34) 
+		End If	
+	End If
+
+'---- insert the speed value
+	If g_iSpeed <> 1 Then
+		colNum = g_iSpeed-1
+		colName = ColumnInfo(g_gcSelTblName, "COL"+ str$(colNum), COL_INFO_NAME)
+		colType = ColumnInfo(g_gcSelTblName, "COL"+ str$(colNum), COL_INFO_TYPE)
+	
+		If colType = COL_TYPE_CHAR Then
+			Update g_gcSelTblName Set colname = Format$(g_fSpeed, "#.##") 
+				Where  RowID = nRows
+		Elseif colType = COL_TYPE_FLOAT Then
+			Update g_gcSelTblName Set colname = g_fSpeed
+
+				Where  RowID = nRows
+		Elseif colType = COL_TYPE_INTEGER Then
+			Update g_gcSelTblName Set colname = Fix(g_fSpeed) 
+				Where  RowID = nRows
+		Else 
+			Note "Incompatible column type definition for " + Chr$(34) + "Speed" + Chr$(34) 
+		End If	
+	End If
+
+'---- insert the time value
+	If g_iGPSTime <> 1 Then
+		colNum = g_iGPSTime-1
+		colName = ColumnInfo(g_gcSelTblName, "COL"+ str$(colNum), COL_INFO_NAME)
+		colType = ColumnInfo(g_gcSelTblName, "COL"+ str$(colNum), COL_INFO_TYPE)
+	
+		If colType = COL_TYPE_CHAR Then
+			Update g_gcSelTblName Set colname = Format$(g_fGPSTime, "#.##") 
+				Where  RowID = nRows
+		Elseif colType = COL_TYPE_FLOAT Then
+			Update g_gcSelTblName Set colname = g_fGPSTime
+			Where  RowID = nRows
+		Elseif colType = COL_TYPE_INTEGER Then
+			Update g_gcSelTblName Set colname = Fix(g_fGPSTime) 
+				Where  RowID = nRows
+		Else 
+			Note "Incompatible Column type Definition for " + Chr$(34) + "GPS Time" + Chr$(34) 
+		End If	
+	End If
+
+'---- insert the heading value
+	If g_iHeading <> 1 Then
+		colNum = g_iHeading-1
+		colName = ColumnInfo(g_gcSelTblName, "COL"+ Str$(colNum), COL_INFO_NAME)
+		colType = ColumnInfo(g_gcSelTblName, "COL"+ Str$(colNum), COL_INFO_TYPE)
+	
+		If colType = COL_TYPE_CHAR Then
+			Update g_gcSelTblName Set colname = Format$(g_fHeading, "#.###") 
+				Where  RowID = nRows
+		Elseif colType = COL_TYPE_FLOAT Then
+			Update g_gcSelTblName Set colname = g_fHeading
+				Where  RowID = nRows
+		Elseif colType = COL_TYPE_INTEGER Then
+			Update g_gcSelTblName Set colname = Fix(g_fHeading) 
+				Where  RowID = nRows
+		Else 
+			Note "Incompatible Column type Definition for " + Chr$(34) + "Heading" + Chr$(34) 
+		End If	
+	End If
+
+'---- insert the PDOP value
+	If g_iPDOP <> 1 Then
+		colNum = g_iPDOP-1
+		colName = ColumnInfo(g_gcSelTblName, "COL"+ Str$(colNum), COL_INFO_NAME)
+		colType = ColumnInfo(g_gcSelTblName, "COL"+ Str$(colNum), COL_INFO_TYPE)
+	
+		If colType = COL_TYPE_CHAR Then
+			Update g_gcSelTblName Set colname = Format$(g_fPDOP, "#.##") 
+				Where  RowID = nRows
+		Elseif colType = COL_TYPE_FLOAT Then
+			Update g_gcSelTblName Set colname = g_fPDOP
+				Where  RowID = nRows
+		Elseif colType = COL_TYPE_INTEGER Then
+			Update g_gcSelTblName Set colname = Fix(g_fPDOP) 
+				Where  RowID = nRows
+		Else 
+			Note "Incompatible Column type Definition for " + Chr$(34) + "PDOP" + Chr$(34) 
+		End If	
+	End If
+'---- 
+	Set Window Info Table g_gcSelTblName Rec nRows 		' open info window and make current record
+	Exit Sub
+
+SymGeocodeErr:
+	If Err = ERR_TABLE_NOT_FOUND Then
+		Note "Point Symbol Geocoding Error. Currently selected geocode table may not be available. Please check your geocode settings."
+	End If 
+		Exit Sub
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+' the StartPLnGeocode procedure
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub StartPLnGeocode
+
+	Dim nTables, tableNum, i as Integer
+	Dim bValidgcTable as Logical
+
+	OnError Goto StartPLnGeocodeErr
+
+	ntables = NumTables()
+	bValidgcTable = False
+
+	For i = 1 To ntables 
+		If StringCompare(TableInfo(i, TAB_INFO_NAME), g_gcSelTblName) = 0 Then
+			g_gcSelTblIndex = i
+			bValidgcTable = True
+		End If
+	Next
+
+	If bValidgcTable = False Then
+		Note "Invalid Geocode Table, please check your geocode settings."
+
+		Alter Menu Item ID UI_MN_POLYGEOCODE 
+			Uncheck
+		Alter Button ID UI_PB_POLYGEOCODE
+			Uncheck
+		
+		g_bPLnGeocode = False
+		g_gcSelTblIndex = 0 
+		g_gcSelTblName = ""
+		Exit Sub
+	End If
+
+	If TableInfo(g_gcSelTblName, TAB_INFO_MAPPABLE) Then
+		Create PLine Into Variable g_gcPLine 2
+			(g_fLon,g_fLat)(g_fLon,g_fLat)
+			Pen g_gcPen
+	Else
+		Note "Geocode table must be a " + Chr$(34) + "Mappable" + Chr$(34) + " table. Please check your geocoding settings."
+		Exit Sub
+	End If
+Exit Sub
+
+StartPLnGeocodeErr:
+
+	Call dPrint ("StartPLn Error :" + str$(Err()) + "|" + Error$()) 
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+' the UpdatePLnGeocode procedure
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+Sub UpdatePLnGeocode
+
+	Dim p_len As Float
+
+	If ObjectGeography(g_gcPLine, OBJ_GEO_LINEBEGX) = 0.0 Then
+		Alter Object g_gcPLine
+			Node Set Position 1, 1 (g_fLon, g_fLat)
+		Alter Object g_gcPLine	
+			Info OBJ_INFO_PEN, g_NullPen
+
+	Elseif ObjectGeography(g_gcPLine, OBJ_GEO_LINEENDX) = 0.0 Then	
+		Alter Object g_gcPLine
+			Node Set Position 1, 2 (g_fLon,g_fLat)
+		Alter Object g_gcPLine
+			Info OBJ_INFO_PEN, g_NullPen
+
+	Else
+		If g_bDist = True Then		'distance tolerance checked	
+			g_sDistUnits = "m"
+			p_len = Distance(ObjectNodeX(g_gcPLine,1,1),ObjectNodeY(g_gcPLine,1,1), g_fLon, g_fLat, g_sDistUnits)
+			If p_len < Val(g_sTolDist) Then
+				Exit Sub	
+			End If		
+		End If
+	End if	
+	
+	If ObjectInfo(g_gcPLine, OBJ_INFO_NPNTS) = PLINE_MAXPTS Then 
+		Call EndPLnGeocode
+		Note "The Maximum number of polyline nodes limit has been reached."
+		Exit Sub
+	End If
+
+	Alter Object g_gcPLine
+		Node Add (g_fLon, g_fLat)
+	Alter Object g_gcPLine
+		Info OBJ_INFO_PEN, g_gcPen
+
+Exit Sub
+
+UpdatePLnGeocodeErr:
+	Call dPrint ("UpdatePLn Error:"+ str$(Err()) + "|" + Error$())
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+' the EndPLnGeocode procedure
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub EndPLnGeocode
+
+	Dim nRows as Integer
+	Dim tableNum as Integer
+
+	Dim nTables, i as Integer
+	Dim bValidgcTable as Logical
+
+	OnError Goto EndPLnGeocodeErr
+
+	ntables = NumTables()
+	bValidgcTable = False
+
+	For i = 1 To ntables 
+		If StringCompare(TableInfo(i, TAB_INFO_NAME), g_gcSelTblName) = 0 Then
+			g_gcSelTblIndex = i
+			bValidgcTable = True
+		End If
+	Next
+
+	If bValidgcTable = False Then
+		Note "Invalid Geocode Table, please check your geocode settings."
+
+		Alter Menu Item ID UI_MN_POLYGEOCODE 
+			Uncheck		
+		Alter Button ID UI_PB_POLYGEOCODE
+			Uncheck
+
+		g_bPLnGeocode = False
+		g_gcSelTblIndex = 0 
+		g_gcSelTblName = ""
+		Exit Sub
+
+	End if
+
+	Insert Into g_gcSelTblName (obj)
+		Values (g_gcPLine)
+
+	nRows = TableInfo(g_gcSelTblName, TAB_INFO_NROWS)
+	Set Window Info Table g_gcSelTblName Rec nRows 		'open info window and make current record
+	
+	Exit Sub
+
+EndPLnGeocodeErr:
+	Resume Next
+End Sub

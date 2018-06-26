@@ -1,0 +1,219 @@
+'****************************************************************************
+' 	trkui.mb
+'
+'  User Interface subroutine module for geotrack.mbx 
+'
+'	Created: 	31 July 1995
+'
+'	Copyright (c) 1995 Blue Marble Geographics, Inc. All Rights Reserved.
+' 
+'  This source code is supplied without warranty and is intended as
+'  sample source code for enabling the use of GPS from within MapInfo.
+'****************************************************************************
+
+Include "mapbasic.def"
+Include "geotrack.def"
+Include "menu.def"
+Include "icons.def"
+
+Declare Sub SetRecenter 
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'MainMenu -- Setup the Main Application Menu
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub MainMenu
+
+	Create Menu "&GPS" As
+		"!+&Off"				ID UI_MN_GPSOFF		Calling GPSOff,
+		"!&Live GPS Data"			ID UI_MN_GPSLIVE		Calling GPSLive,
+		"!&Simulated GPS Data..."	ID UI_MN_GPSSIMULATION	Calling GPSSimulation,
+		"(-", 
+		"Setup &Tracking..."		ID UI_MN_SETUPTRACK	Calling TrackingDLG,
+		"!+Auto&Recenter"		 	ID UI_MN_RECENTER 	Calling SetRecenter,
+		"(-",
+		"Setup GPS &GeoCoding..." 	ID UI_MN_SETUPGEOCODE 	Calling GeoCodingDLG,
+		"(GPS &Point GeoCode" 		ID UI_MN_POINTGEOCODE	Calling SymGeocode,	
+		"(!GPS Pol&yline GeoCode" 	ID UI_MN_POLYGEOCODE 	Calling PLGCode,	
+		"(-",
+		"Terminat&e"			ID UI_MN_TERMINATE 	Calling TerminateMBX,
+		"(-",
+		"&About GeoTrack..."		ID UI_MN_ABOUT 		Calling AboutBox, 
+		"&Help"				ID UI_MN_HELP 		Calling StartHelp
+    	
+	Alter Menu Bar Remove ID 7
+	Alter Menu Bar Add "GPS", ID 7 
+
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'SetRecenter -- if tracking and valid coord recenter map window on coord
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub SetRecenter
+
+	OnError Goto SetRecenterError
+
+	If bRecenter = True Then
+		Alter Menu Item ID UI_MN_RECENTER
+			UnCheck
+		bRecenter = False	
+	Else 
+		Alter Menu Item ID UI_MN_RECENTER
+			Check
+		bRecenter = True	
+	End If
+
+	Exit Sub
+
+SetRecenterError:
+	Call dPrint ("SetRecenterError:" + Error$ + "," + Str$(Err())) 
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'AboutBox -- displays Dialog with app info
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub AboutBox
+	Dialog
+		Title "About GEOTRACK.MBX..." 
+    	Control StaticText Title "This MapBasic application provides a real-time"Position 10, 10
+    	Control StaticText Title "link to your Global Positioning System data by"Position 10, 20
+    	Control StaticText Title "linking to the Geographic Tracker from        "Position 10, 30
+    	Control StaticText Title "Blue Marble Geographics, Inc.                 "Position 10, 40
+		Control OKButton
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'StartHelp -- starts win help with geotrack.mbx help file
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub StartHelp
+
+	OnError Goto RunHelpError
+		Run Program "WinHelp.EXE " +  ApplicationDirectory$() + "GTRKMBX.HLP"
+	Exit Sub
+
+	RunHelpError:
+		Note "Could not find Windows Help File. Please find Windows Help and open GTRKMBX.HLP."
+		Resume Next
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'GeoCodeButton -- create custom button pad for GPS geocoding
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub GeoCodeButton
+
+	Create ButtonPad "GPS" As
+		PushButton
+			ID UI_PB_POINTGEOCODE	
+			Icon MI_ICON_SYMBOL		
+			Calling SymGeocode	
+		ToggleButton
+			ID UI_PB_POLYGEOCODE	
+			Icon MI_ICON_POLYLINE	
+			Calling PLGCode	
+		ToggleButton
+			ID UI_PB_PAUSEGPS
+			Icon MI_ICON_SIGNS_5
+			Calling PauseGPSSimulation
+		Title "GPS"
+	Width 3
+
+'initially all gps buttons not enabled
+	Alter Button ID UI_PB_PAUSEGPS
+		Disable
+	Alter Button ID UI_PB_POINTGEOCODE
+		Disable
+	Alter Button ID UI_PB_POLYGEOCODE
+		Disable
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'PLGCode -- handler for Pline geocoding
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub PLGCode
+	If g_bPLnGeocode = False Then				'Start polyline geocoding
+		Alter Menu Item ID UI_MN_POLYGEOCODE 
+			Check
+		Alter Button ID UI_PB_POLYGEOCODE
+			Check
+		g_bPLnGeocode = True
+		Call StartPLnGeocode
+
+	ElseIf  g_bPLnGeocode = True Then 			'End Polyline geocoding
+		Alter Menu Item ID UI_MN_POLYGEOCODE
+			Uncheck
+		Alter Button ID UI_PB_POLYGEOCODE
+			Uncheck
+		g_bPLnGeocode = False
+		Call EndPLnGeocode
+	End If
+
+End Sub
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'PauseGPSSimulation
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub PauseGPSSimulation			'pauses simulation mode
+
+	Call dPrint ("In-PauseGPSSimulation")
+
+	Dim chan_num as Integer
+
+	chan_num = DDEInitiate("GEOTRACK", "BMG")
+
+	Call dPrint ("				g_bGPSPause: " + g_bGPSPause)
+
+	if g_bGPSPause = True then
+		Call dPrint ("FORWARD----->>>>>")
+		DDEExecute  chan_num, "FORWARD"
+		Call GPSForwardUI
+	else 
+		Call dPrint ("PAUSE------->>>>>")
+		DDEExecute  chan_num, "PAUSE"
+		Call GPSPauseUI
+	end if
+
+	DDETerminate  chan_num
+
+	Call dPrint ("Out-PauseGPSSimulation")
+End Sub
+
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'GPSPauseUI
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub GPSPauseUI		'pauses simulation mode
+
+		Alter Button ID UI_PB_PAUSEGPS
+			Check
+		Alter Button ID UI_PB_POINTGEOCODE
+			Disable
+		Alter Button ID UI_PB_POLYGEOCODE
+			Disable
+
+		Alter Menu Item ID UI_MN_POINTGEOCODE
+			Disable
+		Alter Menu Item ID UI_MN_POLYGEOCODE
+			Disable
+	
+		g_bGPSPause = True
+
+End Sub
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'GPSForwardUI
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+Sub GPSForwardUI			'resumes simulation mode
+
+		Alter Button ID UI_PB_PAUSEGPS
+			Uncheck
+		Alter Button ID UI_PB_POINTGEOCODE
+			Enable
+		Alter Button ID UI_PB_POLYGEOCODE
+			Enable
+
+		Alter Menu Item ID UI_MN_POINTGEOCODE
+			Enable
+		Alter Menu Item ID UI_MN_POLYGEOCODE
+			Enable
+
+		g_bGPSPause = False
+
+End sub

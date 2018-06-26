@@ -1,0 +1,451 @@
+include"mapbasic.def"
+include"menu.def"
+include"Icons.def"
+
+
+Declare Function reg_myplus(ByVal my_string as string) as Integer
+Declare Function find_ColName(ByVal my_TabName as string)  as Integer
+Declare Function find_TabName()  as Integer
+Declare sub myTab_Info
+Declare Sub button_sub
+Declare Sub button_sub1
+Declare Sub Main
+Declare sub PopupMenu_1_handler
+
+Global s_filename As String				'定义要打开的文件名
+Global s_tab As String					'定义要打开的表的别名
+Global myrscp_ColName As String				'定义rscp 列的名称
+Global myrscp_Value As Float				'定义rscp值
+Global max_rows As Integer				'定义表的最大行数
+Global my_object As Object				'定义图形对象
+dim my_NumCols As Integer				'定义打开的表的列数
+dim my_ColName As String				'定义打开的表的列名
+dim my_ColType As Integer				'定义打开的表的列的数据类型
+dim	my_TabNums As Integer				'定义已打开的表的个数
+dim my_TabNum As Integer				'定义已打开的表的序号
+dim my_TabNames As String				'定义查询已打开的表的名字
+dim my_TabFilePath As String			'定义已打开的表的文件路径
+Global my_SelectTabName as Integer
+Global my_SelectColName as Integer
+
+
+
+Dim value_green As Integer				'定义颜色值
+Dim value_blue  As Integer
+Dim value_yellow As Integer
+Dim value_purple As Integer
+Dim value_red As Float
+Dim value_black As Integer
+
+
+
+
+Dim rscp_green As Float				'定义修正后颜色对应的 rscp值
+Dim rscp_blue  As Float
+Dim rscp_yellow As Float
+Dim rscp_purple As Float
+Dim rscp_red As Float
+Dim rscp_black As Float
+
+
+
+
+
+
+
+Dim Section_green As Float				'定义分段颜色值从大向小
+Dim Section_blue As Float
+Dim Section_yellow As Float
+Dim Section_purple As Float
+Dim Section_red As Float
+Dim Section_black As Float
+
+
+
+
+
+
+
+
+Global array_TabName(255) as String						'定义查询已打开的表的名字集合数组
+Global array_ColName(255)	as String					'定义查询已打开的表的列名字集合数组
+Global array_ColType(255)	as Integer				'定义查询已打开的表的列的数据类型
+Global array_FilePath(255) as String	
+
+
+
+ 
+Sub Main 
+dim smnra as Integer 
+smnra =  reg_myplus(".")
+Create ButtonPad "改"  As
+
+PushButton
+  Icon MI_ICON_RULER
+      Calling button_sub
+  HelpMsg "打开tab文件"
+
+PushButton
+  Icon MI_ICON_ZOOM_QUESTION
+      Calling myTab_Info
+  HelpMsg "查询打开的表名和列名确保rscp值所在列的列名为:Total_RSCP."
+
+PushButton
+  Icon MI_ICON_INFO
+      Calling button_sub1
+  HelpMsg "修改此tab与颜色不匹配的rscp值"
+
+
+
+
+Title "修改颜色" 
+ToolbarPosition(0,1)
+Width 3
+Show
+
+
+End Sub
+
+
+Sub button_sub
+    onerror goto error_trap
+
+	s_filename=FileOpenDlg("","","TAB","Open Table")		'文件选择对话框
+	print(s_filename)
+	Open Table s_filename as my_tab Interactive				'打开tab文件
+	'note my_tab
+	print(my_tab)
+	call  myTab_Info
+	'note array_TabName(my_SelectTabName) + array_ColName(my_SelectColName)
+
+	s_tab = TableInfo(array_TabName(my_SelectTabName), TAB_INFO_NAME)			'获得当前打开表的名称
+	myrscp_ColName = array_ColName(my_SelectColName)									'获得RSCP列的名称
+	
+	'print("s_tab:" + s_tab)
+	print("array_TabName(my_SelectTabName):" + array_TabName(my_SelectTabName))
+
+	max_rows = TableInfo(s_tab, TAB_INFO_NROWS)			'获得当前打开第表的总行数
+	my_TabNums = NumTables()			'获得当前打开表的总个数
+	my_TabNames = TableInfo(s_tab,TAB_INFO_NAME)			'获得当前打开第一个表的名字
+	
+	'my_TabNum = TableInfo(0, TAB_INFO_NUM)			'获得当前打开表的序号数
+	'my_TabFilePath = TableInfo(0,TAB_INFO_TABFILE)			'获得当前打开第一个表的文件路径
+	'my_NumCols=NumCols(my_tab)					'获得当前打开表的列数数
+	'my_ColName = ColumnInfo(my_tab,"col1",COL_INFO_NAME)			'获取my_tab表的第一列的名称
+	'my_ColType = ColumnInfo(my_tab,"col1",COL_INFO_TYPE)			'获取my_tab表的第一列的数据类型
+	'Browse * From my_tab						'浏览表哥
+	
+	if TableInfo(s_tab,TAB_INFO_MAPPABLE) then				'判断表格是否可以在地图上显示
+		Map From s_tab						'地图查看
+	else 
+		note "地图不可查看!"
+	end if
+	
+	print("表名：" + s_tab +"。RSCP所在列的名称：" + myrscp_ColName + "。行数：" + max_rows + "。")
+
+
+done: 
+  exit sub 
+error_trap: 
+   print(error$())
+   resume done 
+End sub
+
+
+
+
+
+
+
+
+
+
+
+
+Sub button_sub1
+	onerror goto error_trap
+	'note array_TabName(my_SelectTabName) + "--1----" + array_ColName(my_SelectColName)
+	s_tab = TableInfo(array_TabName(my_SelectTabName), TAB_INFO_NAME)			'获得当前打开表的名称
+	myrscp_ColName = array_ColName(my_SelectColName)									'获得RSCP列的名称
+	dim my_color as integer
+	dim myrscp_Value as float
+	dim i,n as integer
+	max_rows = TableInfo(my_tab, TAB_INFO_NROWS)			'获得当前打开第表的总行数
+	myrscp_ColName = array_ColName(my_SelectColName)									'获得RSCP列的名称
+	print(max_rows)
+	for i=1 to max_rows Step 1
+ 		fetch rec i from s_tab
+		my_object = my_tab.obj
+		my_color = StyleAttr(ObjectInfo(my_object, 2),2)	'当前行对应的对象的颜色值
+		myrscp_Value = my_tab.col(1)						'当前行对应的rscp列的值				
+
+		do case my_color
+			case  my_color >500
+				if (myrscp_Value < -10 and myrscp_Value >= -80) then
+					print(i)
+				else
+					rscp_green = Round(0-(65 + 15 * Rnd (1)),0.01)
+					Update s_tab Set myrscp_ColName	  = rscp_green where rowid = i
+					print("第" + i + "行RSCP值为："+ myrscp_Value + "dBm。颜色值为：" + my_color + "为绿色，RSCP值__错误! 已更改为" + rscp_green )
+				end if
+
+			case 65535
+				if  (myrscp_Value < 80 and myrscp_Value >= -85)  then
+					print(i)
+				else
+					rscp_blue = Round(0-(80 + 5 * Rnd (1)),0.01)
+					Update s_tab Set myrscp_ColName  = rscp_blue where rowid = i
+					print("第" + i + "行RSCP值为："+ myrscp_Value + "dBm。颜色值为：" + my_color + "为蓝色，RSCP值__错误! 已更改为" + rscp_blue )
+				end if
+
+			case 16776960
+				if (myrscp_Value < -85 and myrscp_Value >= -90)  then
+					print(i)
+				else
+					rscp_yellow =  Round(0-(85 + 5 * Rnd (1)),0.01)
+					Update s_tab Set myrscp_ColName  = rscp_yellow where rowid = i
+					print("第" + i + "行RSCP值为："+ myrscp_Value + "dBm。颜色值为：" + my_color + "为黄色，RSCP值__错误! 已更改为" + rscp_yellow )
+				end if
+
+			case 16711935
+				if (myrscp_Value < -90 and myrscp_Value >= -95)  then
+					print(i)
+				else
+					rscp_purple =  Round(0-(90 + 5 * Rnd (1)),0.01)
+					Update s_tab Set myrscp_ColName  = rscp_purple where rowid = i
+					print("第" + i + "行RSCP值为："+ myrscp_Value + "dBm。颜色值为：" + my_color + "为紫色，RSCP值__错误! 已更改为" + rscp_purple )
+				end if
+
+			case 16711680
+				if (myrscp_Value < -95 and myrscp_Value >= -100)  then
+					print(i)
+				else
+					rscp_red =  Round(0-(95 + 5 * Rnd (1)),0.01)
+					Update s_tab Set myrscp_ColName  = rscp_red where rowid = i
+					print("第" + i + "行RSCP值为："+ myrscp_Value + "dBm。颜色值为：" + my_color + "为红色，RSCP值__错误! 已更改为" + rscp_red)
+				end if
+
+			case 0
+				if (myrscp_Value <= -100)  then
+					print(i)
+				else
+					rscp_black =  Round(0-(103 + 10 * Rnd (1)),0.01)
+					Update s_tab Set myrscp_ColName  = rscp_black where rowid = i
+					print("第" + i + "行RSCP值为："+ myrscp_Value + "dBm。颜色值为：" + my_color + "为红色，RSCP值__错误! 已更改为" + rscp_black )
+		 			end if
+
+			case Else
+				print("第" + i + "行颜色值不在统计范围内！    " +my_color )
+		end case
+	next 
+
+
+
+
+
+
+
+done: 
+  exit sub 
+error_trap: 
+   print(error$())
+   resume done 
+End sub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Sub myTab_Info
+	dim temp_string as Integer
+	temp_string = find_TabName()
+
+
+
+	Dialog
+	Control PopupMenu 
+		Title From Variable array_TabName
+		Value 1
+		ID 1 
+		Into my_SelectTabName
+ 		'array_TabName(my_SelectTabName)	
+	Control OkButton
+
+
+	temp_string = find_ColName(array_TabName(my_SelectTabName))
+	Dialog
+	Control PopupMenu
+		Title From Variable   array_ColName
+		Value 1
+		ID 1 
+		Into my_SelectColName
+		'array_ColName(my_SelectColName)
+	Control OkButton
+	
+	'call button_sub1 
+ 
+End Sub
+
+
+
+
+
+
+
+
+function find_TabName() as Integer
+	dim i as Integer
+
+ 	'my_TabNum = TableInfo(0, TAB_INFO_NUM)			'获得当前打开表的序号数
+	'my_TabNames = TableInfo(0,TAB_INFO_NAME)			'获得当前打开第一个表的名字
+	'my_TabFilePath = TableInfo(0,TAB_INFO_TABFILE)			'获得当前打开第一个表的文件路径
+	'my_NumCols=NumCols(my_tab)					'获得当前打开表的列数数
+	'my_ColName = ColumnInfo(my_tab,"col1",COL_INFO_NAME)			'获取my_tab表的第一列的名称
+	'my_ColType = ColumnInfo(my_tab,"col1",COL_INFO_TYPE)			'获取my_tab表的第一列的数据类型
+	'Browse * From my_tab						'浏览表哥
+
+	my_TabNums = NumTables()			'获得当前打开表的总个数
+
+	for i = 1 to my_TabNums
+		my_TabNames = TableInfo(i,TAB_INFO_NAME)
+		array_TabName(i) = my_TabNames
+		my_TabFilePath = TableInfo(i,TAB_INFO_TABFILE)					'获得当前打开表的文件路径
+		array_FilePath(i) = my_TabFilePath
+		print i + "----" + array_TabName(i)
+	next
+	if(array_TabName(i)) then 
+		find_TabName = my_TabNums
+	else
+		find_TabName = -1
+	end if
+end function
+
+
+
+
+
+
+
+
+function find_ColName(ByVal my_TabName as string) as Integer			'传入参数为表名，字符型；返回值为表的列名的数组，字符串数组。
+	dim j as Integer
+
+
+ 	'my_TabNum = TableInfo(0, TAB_INFO_NUM)			'获得当前打开表的序号数
+	'my_TabNames = TableInfo(0,TAB_INFO_NAME)			'获得当前打开第一个表的名字
+	'my_TabFilePath = TableInfo(0,TAB_INFO_TABFILE)			'获得当前打开第一个表的文件路径
+	'my_NumCols=NumCols(my_tab)					'获得当前打开表的列数数
+	'my_ColName = ColumnInfo(my_tab,"col1",COL_INFO_NAME)			'获取my_tab表的第一列的名称
+	'my_ColType = ColumnInfo(my_tab,"col1",COL_INFO_TYPE)			'获取my_tab表的第一列的数据类型
+	'Browse * From my_tab						'浏览表哥
+
+
+	my_NumCols=NumCols(my_TabName)				'获得当前选择表的列数
+
+	for j = 1 to my_NumCols
+		my_ColName = ColumnInfo(my_TabName,"col" + j,COL_INFO_NAME)			'获取第i个表的第i列的名称
+		array_ColName(j) = my_ColName										'存入数组
+		my_ColType = ColumnInfo(my_TabName,"col" + j,COL_INFO_TYPE)			'获取第i个表的第几列的数据类型
+		array_ColType(j) = my_ColType
+		print j + "----" + array_ColName(j)
+	next 
+
+	if(array_ColName(j)) then 
+		find_ColName = my_NumCols
+	else
+		find_ColName = -1
+	end if
+end function
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+sub PopupMenu_1_handler
+
+	If CommandInfo(CMD_INFO_DLG_DBL) = TRUE Then 
+	note " CommandInfo(CMD_INFO_DLG_DBL) "
+	end if
+	 note array_ColName(my_SelectColName)
+
+
+
+end sub
+
+
+
+
+
+
+
+
+
+
+
+function reg_myplus(ByVal my_string as string) as Integer
+
+Dim s_searchfor As String
+  Dialog 
+    Title "By:SMnRa@163.com"
+  Control StaticText
+Title "输入密码:"
+  Control EditText
+    Into s_searchfor
+  Control OkButton
+    Title "OK"
+  Control CancelButton
+    Title "Cancel"
+	If CommandInfo(CMD_INFO_DLG_OK) Then
+   		if s_searchfor = "曰你先人" then
+			print("密码正确：" +s_searchfor) 
+			note("有建议,发邮件.有意见,请保留.本插件仅供娱乐,请勿干坏事!............................................................By:SMnRa@163.com ") 
+			reg_myplus = 1
+			goto goon
+		else
+			print("密码错误：" +s_searchfor)
+			note "By:SMnRa@163.com"
+			End Program
+  		End If
+	print("请确认密码！")
+	End Program
+	End If
+goon:
+	'print(s_searchfor)
+
+end Function

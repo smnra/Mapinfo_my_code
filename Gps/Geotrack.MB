@@ -1,0 +1,1900 @@
+'--------------------------------------------------------------------
+'
+' MapBasic Program: GEOTRACK
+'
+' Date Uncompiled:  01/12/00
+'
+' Uncompiled by MBXDCOMP Program (C) Copyright Stopwatch Maps 1996
+'
+' Fixed bug that prevented trace line from being drawn in Eastern
+' Hemisphere AED2000
+'
+'--------------------------------------------------------------------
+
+' Include "C:\MI4_BETA\MAPBASIC\mapbasic.def"
+' Include "C:\MBX\geotrack.def"
+' Include "C:\MI4_BETA\MAPBASIC\menu.def"
+Include "MAPBASIC.DEF"
+Include "MENU.DEF"
+
+' Global Data Items
+
+Global bDebug As Logical
+Global g_bGPSPause As Logical
+Global g_gcSelTblIndex As Integer
+Global g_gcSelTblName As String
+Global g_bPLnGeocode As Logical
+Global g_iLat As Integer
+Global g_iLon As Integer
+Global g_iGPSTime As Integer
+Global g_iElev As Integer
+Global g_iHeading As Integer
+Global g_iSpeed As Integer
+Global g_iPDOP As Integer
+Global g_fLat As Float
+Global g_fLon As Float
+Global g_fGPSTime As Float
+Global g_fGeoidElev As Float
+Global g_fHeading As Float
+Global g_fSpeed As Float
+Global g_fPDOP As Float
+Global g_gcSymbol As Symbol
+Global g_gcPen As Pen
+Global g_gcPLine As Object
+Global g_puColList As String
+Global msg As String
+Global Halt As Integer
+Global bRecenter As Logical
+Global bExiting As Logical
+Global bHoldOff As Logical
+Global g_trkSelWndIndex As Integer
+Global g_trkSelWndID As Integer
+Global g_sMappable As String
+Global GPSPoint As Object
+Global GPSPLine As Object
+Global g_tkSymbol As Symbol
+Global g_tkPen As Pen
+Global g_nNodes As Integer
+Global g_NullSymbol As Symbol
+Global g_NullPen As Pen
+Global g_iTrack As Integer
+Global g_bDist As Logical
+Global g_sTolDist As String
+Global g_sDistUnits As String
+Global g_WinIdList(0) As Integer
+
+' Module Level Data Items
+
+Dim MODVAR0 As Integer
+
+' Program Sections
+
+Declare Sub Main()
+Declare Sub RemoteMsgHandler()
+Declare Sub WinClosedHandler()
+Declare Sub EndHandler()
+Declare Sub GeoCodingDLG()
+Declare Sub InitGCDlg()
+Declare Sub CheckColType()
+Declare Sub GetColList(ByVal tblname As String)
+Declare Sub UpdatePopups()
+Declare Function FindFirstValidTable() As Integer
+Declare Sub OKHandler()
+Declare Sub CancelHandler()
+Declare Sub TrackingDLG()
+Declare Sub SetTrackType()
+Declare Sub SetTolType()
+Declare Sub SetUpTracking()
+Declare Sub MainMenu()
+Declare Sub GeoCodeButton()
+Declare Sub GPSPauseUI()
+Declare Sub GPSForwardUI()
+Declare Sub SetRecenter()
+Declare Sub AboutBox()
+Declare Sub StartHelp()
+Declare Sub PLGCode()
+Declare Sub PauseGPSSimulation()
+Declare Sub dPrint(ByVal msg As String)
+Declare Sub StartGeotrack()
+Declare Sub EndGeotrack()
+Declare Sub InitApp()
+Declare Sub ProcessUpdate()
+Declare Sub GPSOff()
+Declare Sub GPSLive()
+Declare Sub GPSSimulation()
+Declare Sub TerminateMBX()
+Declare Sub ChkMapWindows()
+Declare Sub SetGPSMapWindow()
+Declare Sub ReInitPoint()
+Declare Sub ReInitPLine()
+Declare Sub CreateAnimateLayer()
+Declare Sub Recenter()
+Declare Function TestMapExtents() As Logical
+Declare Sub ValidateWindow()
+Declare Sub SymGeocode()
+Declare Sub StartPLnGeocode()
+Declare Sub UpdatePLnGeocode()
+Declare Sub EndPLnGeocode()
+
+'--------------------------------------------------------------------
+' Main
+'--------------------------------------------------------------------
+
+Sub Main()
+   bDebug = 0
+   Call dPrint(Chr$(12))
+   Call dPrint("In-Main")
+   Call InitApp
+   Call MainMenu
+   Call GeoCodeButton
+   Call StartGeotrack
+   Call dPrint("Out-Main")
+End Sub
+
+'--------------------------------------------------------------------
+' RemoteMsgHandler
+'--------------------------------------------------------------------
+
+Sub RemoteMsgHandler()
+   Dim msgLen As Integer
+   Dim endEXEPos As Integer
+   Dim msgID As String
+   
+   OnError GoTo LABEL1
+   If bHoldOff = 1 Then
+      Exit Sub
+   End If
+   msg = CommandInfo(1000)
+   Call dPrint("MSG: " + msg)
+   endEXEPos = InStr(1, msg, " ")
+   If endEXEPos = 0 Then
+      msgID = msg
+   Else
+      msgID = Left$(msg, endEXEPos - 1)
+      msgLen = Len(msg)
+   End If
+   If StringCompare(msgID, "UPDATE") = 0 And Halt = 0 Then
+      If NumTables() = 0 Then
+         Call GPSOff
+         Note "Please open a map window and setup tracking."
+         Exit Sub
+      End If
+      If g_trkSelWndID = 0 Then
+         Call GPSOff
+         Note 
+             "Please choose a map window for tracking by selecting 'Setup Tracking' from the 'GPS' menu."
+         
+         Exit Sub
+      End If
+      Call ProcessUpdate
+   End If
+   If StringCompare(msgID, "PAUSE") = 0 Then
+      Call GPSPauseUI
+   End If
+   If StringCompare(msgID, "FORWARD") = 0 Then
+      Call GPSForwardUI
+   End If
+   If StringCompare(msgID, "OFF") = 0 Then
+      Alter Menu Item ID 100
+         Check
+      Alter Menu Item ID 101
+         Uncheck
+      Alter Menu Item ID 102
+         Uncheck
+      Alter Menu Item ID 106
+         Disable
+      Alter Menu Item ID 107
+         Disable
+      Alter Button ID 402
+         Disable
+      Alter Button ID 403
+         Disable
+      Alter Button ID 401
+         Disable
+      g_fLat = 0
+      g_fLon = 0
+      Call ReInitPoint
+      Call ReInitPLine
+      Halt = 1
+   End If
+   If StringCompare(msgID, "LIVE") = 0 Then
+      Alter Menu Item ID 100
+         Uncheck
+      Alter Menu Item ID 101
+         Check
+      Alter Menu Item ID 102
+         Uncheck
+      Alter Menu Item ID 106
+         Enable
+      Alter Menu Item ID 107
+         Enable
+      Alter Button ID 402
+         Enable
+      Alter Button ID 403
+         Enable
+      Alter Button ID 401
+         Disable
+      g_fLat = 0
+      g_fLon = 0
+      Call ReInitPoint
+      Call ReInitPLine
+      Halt = 0
+   End If
+   If StringCompare(msgID, "PLAYING") = 0 Then
+      Alter Menu Item ID 100
+         Uncheck
+      Alter Menu Item ID 101
+         Uncheck
+      Alter Menu Item ID 102
+         Check
+      Alter Menu Item ID 106
+         Enable
+      Alter Menu Item ID 107
+         Enable
+      Alter Button ID 401
+         Enable
+      Alter Button ID 401
+         Uncheck
+      g_bGPSPause = 0
+      Alter Button ID 402
+         Enable
+      Alter Button ID 403
+         Enable
+      g_fLat = 0
+      g_fLon = 0
+      Call ReInitPoint
+      Call ReInitPLine
+      Halt = 0
+   End If
+   Exit Sub
+LABEL0:
+LABEL1:
+   Call dPrint("In RMHError: " + Error$() + "|" + Str$(Err()))
+   Call GPSOff
+   Exit Sub
+End Sub
+
+'--------------------------------------------------------------------
+' WinClosedHandler
+'--------------------------------------------------------------------
+
+Sub WinClosedHandler()
+   Call dPrint("WinClosedHandler: " + CommandInfo(1))
+   If CommandInfo(1) = g_trkSelWndID Then
+      Call dPrint("Tracking Window Closed")
+      Halt = 1
+      g_trkSelWndID = 0
+      Call GPSOff
+   End If
+End Sub
+
+'--------------------------------------------------------------------
+' EndHandler
+'--------------------------------------------------------------------
+
+Sub EndHandler()
+   Call dPrint("In-EndHandler")
+   bHoldOff = 1
+   OnError GoTo LABEL0
+   Call EndGeotrack
+   Open Table ApplicationDirectory$() + "TempGPS.TAB"
+   Rollback Table TempGPS
+   Drop Table TempGPS
+   Call dPrint("Out-EndHandler")
+   Exit Sub
+LABEL0:
+   Call dPrint("			EH-TermError:" + Str$(Err()) + " | " + Error$)
+   Resume Next
+End Sub
+
+'--------------------------------------------------------------------
+' GeoCodingDLG
+'--------------------------------------------------------------------
+
+Sub GeoCodingDLG()
+   Dim tbl_list As String
+   Dim i As Integer
+   Dim ntables As Integer
+   
+   OnError GoTo LABEL0
+   tbl_list = ""
+   ntables = NumTables()
+   If ntables <> 0 Then
+      For i = 1 To ntables Step 1
+         tbl_list = tbl_list + TableInfo(i, 1) + ";"
+      Next
+   Else
+      Note 
+          "No tables open. Geocoding requires a write enabled, mappable table must be open. Please open a write enabled, mappable table to proceed."
+      
+      Exit Sub
+   End If
+   If FindFirstValidTable() = 0 Then
+      Note 
+          "No write enabled, mappable tables open. Please open a write enabled, mappable table to proceed."
+      
+      Exit Sub
+   End If
+   Dialog
+      Title "Setup GPS GeoCoding"
+      Height 195 Width 170 Position 10, 10
+      Calling InitGCDlg
+      Control GroupBox
+      Title "GPS GeoCode Table"
+      Position 12, 5
+      Height 35 Width 153
+      Control PopupMenu
+      Position 25, 20 Width 75
+      ID 300
+      Value g_gcSelTblIndex
+      Into g_gcSelTblIndex
+      Calling UpdatePopups
+      Title tbl_list
+      Control SymbolPicker
+      Position 110, 15
+      Value g_gcSymbol
+      Into g_gcSymbol
+      Control PenPicker
+      Position 140, 15
+      Value g_gcPen
+      Into g_gcPen
+      Control GroupBox
+      Title "Field Assignment"
+      Position 12, 50
+      Height 120 Width 153
+      Control StaticText
+      Position 30, 65
+      Title "Latitude:"
+      Control PopupMenu
+      Position 75, 62 Width 70
+      ID 301
+      Value g_iLat
+      Into g_iLat
+      Calling CheckColType
+      Title g_puColList
+      Control StaticText
+      Position 30, 80
+      Title "Longitude:"
+      Control PopupMenu
+      Position 75, 77 Width 70
+      ID 302
+      Value g_iLon
+      Into g_iLon
+      Calling CheckColType
+      Title g_puColList
+      Control StaticText
+      Position 30, 95
+      Title "Elevation:"
+      Control PopupMenu
+      Position 75, 92 Width 70
+      ID 303
+      Value g_iElev
+      Into g_iElev
+      Calling CheckColType
+      Title g_puColList
+      Control StaticText
+      Position 30, 110
+      Title "Time:"
+      Control PopupMenu
+      Position 75, 107 Width 70
+      ID 304
+      Value g_iGPSTime
+      Into g_iGPSTime
+      Calling CheckColType
+      Title g_puColList
+      Control StaticText
+      Position 30, 125
+      Title "Speed:"
+      Control PopupMenu
+      Position 75, 122 Width 70
+      ID 305
+      Value g_iSpeed
+      Into g_iSpeed
+      Calling CheckColType
+      Title g_puColList
+      Control StaticText
+      Position 30, 140
+      Title "Heading:"
+      Control PopupMenu
+      Position 75, 137 Width 70
+      ID 306
+      Value g_iHeading
+      Into g_iHeading
+      Calling CheckColType
+      Title g_puColList
+      Control StaticText
+      Position 30, 155
+      Title "PDOP:"
+      Control PopupMenu
+      Position 75, 152 Width 70
+      ID 307
+      Value g_iPDOP
+      Into g_iPDOP
+      Calling CheckColType
+      Title g_puColList
+      Control OKButton
+      Calling OKHandler
+      Position 45, 175
+      Control CancelButton
+      Calling CancelHandler
+      Position 85, 175
+   Exit Sub
+LABEL0:
+   g_gcSelTblIndex = 1
+End Sub
+
+'--------------------------------------------------------------------
+' InitGCDlg
+'--------------------------------------------------------------------
+
+Sub InitGCDlg()
+   Dim ntables As Integer
+   Dim i As Integer
+   Dim found As Integer
+   
+   g_gcSelTblIndex = 0
+   ntables = NumTables()
+   If ntables <> 0 Then
+      For i = 1 To ntables Step 1
+         If StringCompare(TableInfo(i, 1), g_gcSelTblName) = 0 Then
+            g_gcSelTblIndex = i
+         End If
+      Next
+   End If
+   If g_gcSelTblIndex = 0 Then
+      g_gcSelTblIndex = FindFirstValidTable()
+   End If
+   Alter Control 300
+      Value g_gcSelTblIndex
+   Call UpdatePopups
+   Alter Control 301
+      Value g_iLat
+   Alter Control 302
+      Value g_iLon
+   Alter Control 303
+      Value g_iElev
+   Alter Control 304
+      Value g_iGPSTime
+   Alter Control 305
+      Value g_iSpeed
+   Alter Control 306
+      Value g_iHeading
+   Alter Control 307
+      Value g_iPDOP
+End Sub
+
+'--------------------------------------------------------------------
+' CheckColType
+'--------------------------------------------------------------------
+
+Sub CheckColType()
+   Dim coltype As Integer
+   
+   If ReadControlValue(TriggerControl()) <> 1 Then
+      coltype = ColumnInfo(ReadControlValue(300), "COL" + 
+       Str$(ReadControlValue(TriggerControl()) - 1), 3)
+      If coltype = 1 Or coltype = 8 Then
+      Else
+         Note "Selected column not of a valid type for GPS Geocode input." + 
+             Chr$(10) + "Please select a column of type CHAR or FLOAT."
+         Alter Control TriggerControl()
+            Value 1
+      End If
+   End If
+End Sub
+
+'--------------------------------------------------------------------
+' GetColList
+'--------------------------------------------------------------------
+
+Sub GetColList(ByVal tblname As String)
+   Dim i As Integer
+   Dim num_cols As Integer
+   Dim tnum As Integer
+   
+   tnum = TableInfo(tblname, 2)
+   num_cols = NumCols(tblname)
+   If num_cols <> 0 Then
+      g_puColList = "-None-;"
+      For i = 1 To num_cols Step 1
+         g_puColList = g_puColList + ColumnInfo(tnum, "COL" + i, 1) + ";"
+      Next
+   Else
+      Note "No columns in table."
+      Exit Sub
+   End If
+End Sub
+
+'--------------------------------------------------------------------
+' UpdatePopups
+'--------------------------------------------------------------------
+
+Sub UpdatePopups()
+   Dim i As Integer
+   Dim index As Integer
+   Dim tname As String
+   
+   If TableInfo(ReadControlValue(300), 6) = 1 Or 
+    TableInfo(ReadControlValue(300), 5) = 0 Then
+      Note 
+          "The selected table is READONLY or not MAPPABLE. Please select another table."
+      
+      index = FindFirstValidTable()
+      If index <> 0 Then
+         Alter Control 300
+            Value index
+      Else
+         Note ""
+         Exit Sub
+      End If
+   End If
+   tname = TableInfo(ReadControlValue(300), 1)
+   Call GetColList(tname)
+   For i = 301 To 307 Step 1
+      Alter Control i
+         Title g_puColList
+   Next
+End Sub
+
+'--------------------------------------------------------------------
+' FindFirstValidTable
+'--------------------------------------------------------------------
+
+Function FindFirstValidTable() As Integer
+   Dim i As Integer
+   Dim index As Integer
+   Dim ntables As Integer
+   
+   index = 0
+   ntables = NumTables()
+   If ntables <> 0 Then
+      For i = 1 To ntables Step 1
+         If TableInfo(i, 6) = 0 And TableInfo(i, 5) = 1 Then
+            If index = 0 Then
+               index = i
+            End If
+         End If
+      Next
+   Else
+      index = 0
+   End If
+   FindFirstValidTable = index
+End Function
+
+'--------------------------------------------------------------------
+' OKHandler
+'--------------------------------------------------------------------
+
+Sub OKHandler()
+   If TableInfo(ReadControlValue(300), 6) = 1 Then
+      Note "Selected Table is READONLY. Please select another table."
+      Dialog Preserve
+   Else
+      If TableInfo(ReadControlValue(300), 5) = 0 Then
+         Note 
+             "The selected table is not a MAPPABLE table. Please select another table."
+         
+         Dialog Preserve
+      Else
+         g_gcSelTblIndex = TableInfo(ReadControlValue(300), 2)
+         g_gcSelTblName = TableInfo(ReadControlValue(300), 1)
+         Call GetColList(g_gcSelTblName)
+      End If
+   End If
+End Sub
+
+'--------------------------------------------------------------------
+' CancelHandler
+'--------------------------------------------------------------------
+
+Sub CancelHandler()
+   If g_gcSelTblIndex <> 0 Then
+      g_gcSelTblName = TableInfo(g_gcSelTblIndex, 1)
+      Call GetColList(g_gcSelTblName)
+   Else
+      g_gcSelTblName = ""
+   End If
+End Sub
+
+'--------------------------------------------------------------------
+' TrackingDLG
+'--------------------------------------------------------------------
+
+Sub TrackingDLG()
+   Dim l_Halt As Integer
+   
+   l_Halt = Halt
+   Halt = 1
+   Call ChkMapWindows
+   If g_sMappable <> "" Then
+      Dialog
+         Calling SetTrackType
+         Title "Setup GPS Tracking"
+         Height 190 Width 143 Position 60, 80
+         Control GroupBox
+         Title "Tracking Window"
+         Position 12, 5
+         Height 38 Width 123
+         Control PopupMenu
+         Position 20, 20 Width 105
+         ID 200
+         Value g_trkSelWndIndex
+         Into g_trkSelWndIndex
+         Title g_sMappable
+         Control GroupBox
+         Title "Track Type"
+         Position 12, 47
+         Height 60 Width 123
+         Control RadioGroup
+         Position 30, 67
+         ID 201
+         Calling SetTrackType
+         Title "&Symbol;&Polyline"
+         Value g_iTrack
+         Into g_iTrack
+         Control SymbolPicker
+         Position 107, 57
+         ID 202
+         Value g_tkSymbol
+         Into g_tkSymbol
+         Control PenPicker
+         Position 107, 82
+         ID 203
+         Value g_tkPen
+         Into g_tkPen
+         Control GroupBox
+         Title "Tolerances"
+         Position 12, 115
+         Height 45 Width 123
+         Control CheckBox
+         Position 20, 130
+         ID 204
+         Calling SetTolType
+         Title "&Distance(meters)"
+         Value g_bDist
+         Into g_bDist
+         Control EditText
+         Position 88, 130 Width 40
+         ID 205
+         Value g_sTolDist
+         Into g_sTolDist
+         Control OKButton
+         Calling SetupTracking
+         Position 33, 168
+         Control CancelButton
+         Position 77, 168
+   Else
+      Note "At least one Map Window must be open to setup tracking."
+   End If
+   Halt = l_Halt
+End Sub
+
+'--------------------------------------------------------------------
+' SetTrackType
+'--------------------------------------------------------------------
+
+Sub SetTrackType()
+   Dim nWindows As Integer
+   Dim i As Integer
+   
+   nWindows = NumWindows()
+   For i = 1 To nWindows Step 1
+      If WindowID(i) = g_trkSelWndID Then
+         g_trkSelWndIndex = i
+      End If
+   Next
+   Do Case ReadControlValue(201)
+      Case 1
+         Alter Control 202
+            Enable
+         Alter Control 203
+            Disable
+         Alter Control 204
+            Value 0
+         Alter Control 204
+            Disable
+      Case 2
+         Alter Control 202
+            Disable
+         Alter Control 203
+            Enable
+         Alter Control 204
+            Enable
+   End Case
+   If g_bDist = 0 Then
+      Alter Control 205
+         Disable
+   Else
+      Alter Control 205
+         Enable
+   End If
+End Sub
+
+'--------------------------------------------------------------------
+' SetTolType
+'--------------------------------------------------------------------
+
+Sub SetTolType()
+   
+   Do Case ReadControlValue(204)
+      Case 1
+         Alter Control 205
+            Enable
+      Case 0
+         Alter Control 205
+            Disable
+   End Case
+End Sub
+
+'--------------------------------------------------------------------
+' SetUpTracking
+'--------------------------------------------------------------------
+
+Sub SetUpTracking()
+   Dim nWindows As Integer
+   Dim nLayers As Integer
+   Dim i As Integer
+   Dim j As Integer
+   
+   Call SetGPSMapWindow
+End Sub
+
+'--------------------------------------------------------------------
+' MainMenu
+'--------------------------------------------------------------------
+
+Sub MainMenu()
+   Create Menu "&GPS" As
+      "!+&Off" ID 100 Calling GPSOff,
+      "!&Live GPS Data" ID 101 Calling GPSLive,
+      "!&Simulated GPS Data..." ID 102 Calling GPSSimulation,
+      "(-",
+      "Setup &Tracking..." ID 103 Calling TrackingDLG,
+      "!+Auto&Recenter" ID 104 Calling SetRecenter,
+      "(-",
+      "Setup GPS &GeoCoding..." ID 105 Calling GeoCodingDLG,
+      "(GPS &Point GeoCode" ID 106 Calling SymGeocode,
+      "(!GPS Pol&yline GeoCode" ID 107 Calling PLGCode,
+      "(-",
+      "Terminat&e" ID 108 Calling TerminateMBX,
+      "(-",
+      "&About GeoTrack..." ID 109 Calling AboutBox,
+      "&Help" ID 110 Calling StartHelp
+   Alter Menu Bar Remove ID 7
+   Alter Menu Bar Add "GPS", ID 7
+End Sub
+
+'--------------------------------------------------------------------
+' GeoCodeButton
+'--------------------------------------------------------------------
+
+Sub GeoCodeButton()
+   Create ButtonPad "GPS" As
+      PushButton
+      ID 402
+      Icon 16
+      Calling SymGeocode
+      ToggleButton
+
+
+      ID 403
+      Icon 18
+      Calling PLGCode
+      ToggleButton
+      ID 401
+      Icon 279
+      Calling PauseGPSSimulation
+      Title "GPS"
+      Width 3
+   Alter Button ID 401
+      Disable
+   Alter Button ID 402
+      Disable
+   Alter Button ID 403
+      Disable
+End Sub
+
+'--------------------------------------------------------------------
+' GPSPauseUI
+'--------------------------------------------------------------------
+
+Sub GPSPauseUI()
+   Alter Button ID 401
+      Check
+   Alter Button ID 402
+      Disable
+   Alter Button ID 403
+      Disable
+   Alter Menu Item ID 106
+      Disable
+   Alter Menu Item ID 107
+      Disable
+   g_bGPSPause = 1
+End Sub
+
+'--------------------------------------------------------------------
+' GPSForwardUI
+'--------------------------------------------------------------------
+
+Sub GPSForwardUI()
+   Alter Button ID 401
+      Uncheck
+   Alter Button ID 402
+      Enable
+   Alter Button ID 403
+      Enable
+   Alter Menu Item ID 106
+      Enable
+   Alter Menu Item ID 107
+      Enable
+   g_bGPSPause = 0
+End Sub
+
+'--------------------------------------------------------------------
+' SetRecenter
+'--------------------------------------------------------------------
+
+Sub SetRecenter()
+   OnError GoTo LABEL0
+   If bRecenter = 1 Then
+      Alter Menu Item ID 104
+         Uncheck
+      bRecenter = 0
+   Else
+      Alter Menu Item ID 104
+         Check
+      bRecenter = 1
+   End If
+   Exit Sub
+LABEL0:
+   Call dPrint("SetRecenterError:" + Error$ + "," + Str$(Err()))
+End Sub
+
+'--------------------------------------------------------------------
+' AboutBox
+'--------------------------------------------------------------------
+
+Sub AboutBox()
+   Dialog
+      Title "About GEOTRACK.MBX..."
+      Control StaticText Title "This MapBasic application provides a real-time" 
+       Position 10, 10
+      Control StaticText Title "link to your Global Positioning System data by" 
+       Position 10, 20
+      Control StaticText Title "linking to the Geographic Tracker from        " 
+       Position 10, 30
+      Control StaticText Title "Blue Marble Geographics, Inc.                 " 
+       Position 10, 40
+      Control OKButton
+End Sub
+
+'--------------------------------------------------------------------
+' StartHelp
+'--------------------------------------------------------------------
+
+Sub StartHelp()
+   OnError GoTo LABEL0
+   Run Program "WinHelp.EXE " + ApplicationDirectory$() + "GTRKMBX.HLP"
+   Exit Sub
+LABEL0:
+   Note 
+       "Could not find Windows Help File. Please find Windows Help and open GTRKMBX.HLP."
+   
+   Resume Next
+End Sub
+
+'--------------------------------------------------------------------
+' PLGCode
+'--------------------------------------------------------------------
+
+Sub PLGCode()
+   If g_bPLnGeocode = 0 Then
+      Alter Menu Item ID 107
+         Check
+      Alter Button ID 403
+         Check
+      g_bPLnGeocode = 1
+      Call StartPLnGeocode
+   Else
+      If g_bPLnGeocode = 1 Then
+         Alter Menu Item ID 107
+            Uncheck
+         Alter Button ID 403
+            Uncheck
+         g_bPLnGeocode = 0
+         Call EndPLnGeocode
+      End If
+   End If
+End Sub
+
+'--------------------------------------------------------------------
+' PauseGPSSimulation
+'--------------------------------------------------------------------
+
+Sub PauseGPSSimulation()
+   Dim chan_num As Integer
+   
+   Call dPrint("In-PauseGPSSimulation")
+   chan_num = DDEInitiate("GEOTRACK", "BMG")
+   Call dPrint("				g_bGPSPause: " + g_bGPSPause)
+   If g_bGPSPause = 1 Then
+      Call dPrint("FORWARD----->>>>>")
+      DdeExecute chan_num, "FORWARD"
+      Call GPSForwardUI
+   Else
+      Call dPrint("PAUSE------->>>>>")
+      DdeExecute chan_num, "PAUSE"
+      Call GPSPauseUI
+   End If
+   DdeTerminate chan_num
+   Call dPrint("Out-PauseGPSSimulation")
+End Sub
+
+'--------------------------------------------------------------------
+' dPrint
+'--------------------------------------------------------------------
+
+Sub dPrint(ByVal msg As String)
+   If bDebug Then
+      Print msg
+   End If
+End Sub
+
+'--------------------------------------------------------------------
+' StartGeotrack
+'--------------------------------------------------------------------
+
+Sub StartGeotrack()
+   Dim sGeotrackPath As String
+   
+   Call dPrint("In- StartGeotrack")
+   OnError GoTo LABEL1
+   sGeotrackPath = ApplicationDirectory$() + "GEOTRACK.EXE"
+   Run Program sGeotrackPath
+LABEL0:
+   Call dPrint("Out- StartGeotrack")
+   Exit Sub
+LABEL1:
+   Call dPrint("StartGeotrackError: " + Str$(Err()) + "|" + Error$())
+   Note 
+       "Could not find Geotrack.EXE. Please find and run Geotrack.EXE and select 'Connect' from its Options menu."
+   
+   Resume LABEL0
+End Sub
+
+'--------------------------------------------------------------------
+' EndGeotrack
+'--------------------------------------------------------------------
+
+Sub EndGeotrack()
+   Dim chan_num As Integer
+   
+   Call dPrint("In-EndGeoTrack")
+   OnError GoTo LABEL1
+   chan_num = DDEInitiate("GEOTRACK", "BMG")
+   DdeExecute chan_num, "OFF"
+   DdeExecute chan_num, "EXIT"
+LABEL0:
+   Call dPrint("Out-EndGeoTrack")
+   Exit Sub
+LABEL1:
+   Call dPrint("EndGeoTrackError:" + Str$(Err()) + " | " + Error$())
+   Resume LABEL0
+End Sub
+
+'--------------------------------------------------------------------
+' InitApp
+'--------------------------------------------------------------------
+
+Sub InitApp()
+   Dim nWindows As Integer
+   Dim i As Integer
+   
+   Call dPrint("In-InitApp")
+   OnError GoTo LABEL1
+   Halt = 0
+   bHoldOff = 1
+   g_bPLnGeocode = 0
+   g_bGPSPause = 0
+   bRecenter = 1
+   g_gcSelTblIndex = 0
+   g_gcSelTblName = ""
+   g_trkSelWndID = 0
+   g_gcSymbol = CurrentSymbol()
+   g_tkSymbol = CurrentSymbol()
+   g_gcPen = CurrentPen()
+   g_tkPen = CurrentPen()
+   g_NullSymbol = MakeSymbol(31, 0, 12)
+   g_NullPen = MakePen(0, 1, 0)
+   g_iTrack = 1
+   g_bDist = 0
+   g_sTolDist = "0"
+   g_iLat = 1
+   g_iLon = 1
+   g_iElev = 1
+   g_iGPSTime = 1
+   g_iSpeed = 1
+   g_iHeading = 1
+   g_iPDOP = 1
+   Call CreateAnimateLayer
+   g_sMappable = ""
+   nWindows = NumWindows()
+   ReDim g_WinIdList(nWindows)
+   Call dPrint("nWindows: " + Str$(nWindows))
+   For i = 1 To nWindows Step 1
+      If WindowInfo(WindowID(i), 3) = 1 Then
+      End If
+      g_WinIdList(i) = WindowID(i)
+      Call dPrint("g_WinIdList(" + Str$(i) + " ): " + Str$(g_WinIdList(i)))
+   Next
+   If nWindows = 0 Then
+      Note "At least one Map Window must be open to use the Geotrack.MBX."
+      g_trkSelWndID = 0
+   Else
+      If nWindows > 0 Then
+         For i = 1 To nWindows Step 1
+            If WindowInfo(WindowID(i), 3) = 1 Then
+               g_sMappable = g_sMappable + WindowInfo(WindowID(i), 1) + ";"
+               Set Window WindowID(i)
+                  Front
+               g_trkSelWndID = WindowID(i)
+               Add Map Layer TempGPS Animate
+               Call dPrint("After Add TempGPS as Animate to: " + g_trkSelWndID)
+               bHoldOff = 0
+               Exit Sub
+            End If
+         Next
+      End If
+   End If
+LABEL0:
+   Call dPrint("Out-InitApp")
+   Exit Sub
+LABEL1:
+   Call dPrint("InitAppError: " + Str$(Err()) + "|" + Error$())
+   Resume LABEL0
+End Sub
+
+'--------------------------------------------------------------------
+' ProcessUpdate
+'--------------------------------------------------------------------
+
+Sub ProcessUpdate()
+   Dim sVersion As String
+   Dim sLat As String
+   Dim sLon As String
+   Dim sGeoidElev As String
+   Dim sElipElev As String
+   Dim sSpeed As String
+   Dim sHeading As String
+   Dim sPDOP As String
+   Dim sGPSTime As String
+   Dim p_len As Float
+   Dim bAdd As Logical
+   Dim xPos As Float
+   Dim yPos As Float
+   Dim rows As Integer
+   Dim startPos As Integer
+   Dim endPos As Integer
+   
+   OnError GoTo LABEL1
+   If g_trkSelWndID = 0 Then
+      Note 
+          "A valid Tracking window has not been selected. Please select Setup Tracking from the GPS menu and specify a Mappable table to track into. "
+      
+      Call GPSOff
+      Exit Sub
+   End If
+   If bHoldOff = 1 Then
+      Exit Sub
+   End If
+   startPos = 10
+   endPos = InStr(startPos, msg, ",")
+   sLat = Mid$(msg, startPos, endPos - startPos)
+   If sLat <> "" Then
+      g_fLat = Val(sLat)
+   End If
+   startPos = endPos + 1
+   endPos = InStr(startPos, msg, ",")
+   sLon = Mid$(msg, startPos, endPos - startPos)
+   If sLon <> "" Then
+      g_fLon = Val(sLon)
+   End If
+   startPos = endPos + 1
+   endPos = InStr(startPos, msg, ",")
+   sGeoidElev = Mid$(msg, startPos, endPos - startPos)
+   If sGeoidElev <> "" Then
+      g_fGeoidElev = Val(sGeoidElev)
+   End If
+   startPos = endPos + 1
+   endPos = InStr(startPos, msg, ",")
+   startPos = endPos + 1
+   endPos = InStr(startPos, msg, ",")
+   sSpeed = Mid$(msg, startPos, endPos - startPos)
+   If sSpeed <> "" Then
+      g_fSpeed = Val(sSpeed)
+   End If
+   startPos = endPos + 1
+   endPos = InStr(startPos, msg, ",")
+   sHeading = Mid$(msg, startPos, endPos - startPos)
+   If sHeading <> "" Then
+      g_fHeading = Val(sHeading)
+   End If
+   startPos = endPos + 1
+   endPos = InStr(startPos, msg, ",")
+   sPDOP = Mid$(msg, startPos, endPos - startPos)
+   If sPDOP <> "" Then
+      g_fPDOP = Val(sPDOP)
+   End If
+   startPos = endPos + 1
+   endPos = InStr(startPos, msg, ",")
+   sGPSTime = Mid$(msg, startPos, endPos - startPos)
+   If sGPSTime <> "" Then
+      g_fGPSTime = Val(sGPSTime)
+   End If
+   If Halt = 0 Then
+      Do Case g_iTrack
+         Case 1
+            Fetch First From TempGPS
+            GPSPoint = TempGPS.obj
+            Alter Object GPSPoint
+               Geography 1, g_fLon
+            Alter Object GPSPoint
+               Geography 2, g_fLat
+            Alter Object GPSPoint
+               Info 2, g_tkSymbol
+            Update TempGPS Set obj = GPSPoint
+               Where ROWID = 1
+         Case 2
+            Fetch Last From TempGPS
+            GPSPLine = TempGPS.obj
+            Alter Object GPSPLine
+               Info 2, g_tkPen
+'           If ObjectGeography(GPSPLine, 1) = 0 Then     AED2000
+' Original test only works in Western Hemisphere         AED2000
+' where longitude values are negative. Apparently,       AED2000
+' ObjectGeography returns MINIMUM value, which is        AED2000
+' still 0 if only one node is set to a Eastern           AED2000
+' Hemisphere (positive) value.                           AED2000
+            If ObjectNodeX(GPSPLine, 1, 1) = 0 Then     'AED2000
+               Alter Object GPSPLine
+                  Node Set Position 1, 1 ( g_fLon, g_fLat )
+               Alter Object GPSPLine
+                  Info 2, g_NullPen
+               Update TempGPS Set obj = GPSPLine
+                  Where ROWID = 2
+            Else
+'              If ObjectGeography(GPSPLine, 3) = 0 Then  AED2000
+' Original test only works in Western Hemisphere.        AED2000
+' See comments above.                                    AED2000
+               If ObjectNodeX(GPSPLine, 1, 2) = 0 Then  'AED2000
+                  Alter Object GPSPLine
+                     Node Set Position 1, 2 ( g_fLon, g_fLat )
+                  Alter Object GPSPLine
+                     Info 2, g_NullPen
+                  Update TempGPS Set obj = GPSPLine
+                     Where ROWID = 2
+               Else
+                  If g_bDist = 1 Then
+                     g_sDistUnits = "m"
+                     p_len = Distance(ObjectNodeX(GPSPLine, 1, 1), 
+                      ObjectNodeY(GPSPLine, 1, 1), g_fLon, g_fLat, 
+                      g_sDistUnits)
+                     If p_len < Val(g_sTolDist) Then
+                        Exit Sub
+                     End If
+                  End If
+                  If ObjectInfo(GPSPLine, 20) > 15000 Then
+                     Call ReInitPLine
+                  End If
+                  Alter Object GPSPLine
+                     Node Add ( g_fLon, g_fLat )
+                  Alter Object GPSPLine
+                     Info 2, g_tkPen
+                  Update TempGPS Set obj = GPSPLine
+                     Where ROWID = 2
+               End If
+            End If
+      End Case
+      If g_bPLnGeocode = 1 Then
+         Call UpdatePLnGeocode
+      End If
+      If bRecenter = 1 And TestMapExtents() = 1 Then
+         Call Recenter
+      End If
+   End If
+   Exit Sub
+LABEL0:
+LABEL1:
+   Call dPrint("ProcessUpdateError:" + Str$(Err()))
+   Resume Next
+End Sub
+
+'--------------------------------------------------------------------
+' GPSOff
+'--------------------------------------------------------------------
+
+Sub GPSOff()
+   Dim chan_num As Integer
+   
+   Call dPrint("In-GPSOff")
+   OnError GoTo LABEL0
+   chan_num = DDEInitiate("GEOTRACK", "BMG")
+   DdeExecute chan_num, "OFF"
+   DdeTerminate chan_num
+   Call dPrint("Out-GPSOff")
+   Exit Sub
+LABEL0:
+   Call dPrint("GPSOffError: " + Err() + Error$)
+   If Err() = 697 Then
+      Note 
+          "The Geographic Tracker does not respond. Please check that the Geographic Tracker is running correctly."
+      
+   Else
+      If Err() = 699 Then
+         Call dPrint("GPSOffError: " + Err() + "|" + Error$())
+      End If
+   End If
+   Resume Next
+End Sub
+
+'--------------------------------------------------------------------
+' GPSLive
+'--------------------------------------------------------------------
+
+Sub GPSLive()
+   Dim chan_num As Integer
+   
+   Call dPrint("In-GPSLive")
+   OnError GoTo LABEL1
+   chan_num = DDEInitiate("GEOTRACK", "BMG")
+   DdeExecute chan_num, "LIVE"
+   DdeTerminate chan_num
+   bHoldOff = 0
+LABEL0:
+   Call dPrint("Out-GPSLive")
+   Exit Sub
+LABEL1:
+   Call dPrint("GPSLiveError: " + Err() + "<" + Error$() + ">")
+   Resume LABEL0
+End Sub
+
+'--------------------------------------------------------------------
+' GPSSimulation
+'--------------------------------------------------------------------
+
+Sub GPSSimulation()
+   Dim chan_num As Integer
+   Dim logfilename As String
+   
+   Call dPrint("In-GPSSimulation")
+   OnError GoTo LABEL2
+   chan_num = DDEInitiate("GEOTRACK", "BMG")
+   logfilename = FileOpenDlg(ApplicationDirectory$(), "", "GPS", 
+    "Select a GPS Simulation File")
+   If logfilename <> "" Then
+      DdeExecute chan_num, "PLAY " + logfilename
+   Else
+      Exit Sub
+   End If
+   DdeTerminate chan_num
+   bHoldOff = 0
+LABEL1:
+   Call dPrint("Out-GPSSimulation")
+   Exit Sub
+LABEL0:
+LABEL2:
+   Call dPrint("In-GPSSimulationError: " + Err() + "|" + Error$())
+   Resume LABEL1
+End Sub
+
+'--------------------------------------------------------------------
+' TerminateMBX
+'--------------------------------------------------------------------
+
+Sub TerminateMBX()
+   Call dPrint("In-TerminateMBX")
+   OnError GoTo LABEL0
+   bHoldOff = 1
+   Call dPrint("Calling EndProgram")
+   End Program
+   Exit Sub
+LABEL0:
+   Call dPrint("Terminate Error:" + Error$() + "|" + Str$(Err()))
+   End Program
+End Sub
+
+'--------------------------------------------------------------------
+' ChkMapWindows
+'--------------------------------------------------------------------
+
+Sub ChkMapWindows()
+   Dim nWindows As Integer
+   Dim i As Integer
+   
+   Call dPrint("In- ChkMapWindows")
+   g_sMappable = ""
+   nWindows = NumWindows()
+   For i = 1 To nWindows Step 1
+      If WindowInfo(WindowID(i), 3) = 1 Then
+         g_sMappable = g_sMappable + WindowInfo(WindowID(i), 1) + ";"
+      End If
+   Next
+   Call dPrint("Out- ChkMapWindows")
+End Sub
+
+'--------------------------------------------------------------------
+' SetGPSMapWindow
+'--------------------------------------------------------------------
+
+Sub SetGPSMapWindow()
+   Dim i As Integer
+   Dim iMap As Integer
+   Dim startPos As Integer
+   Dim endPos As Integer
+   Dim nWindows As Integer
+   Dim bMapWin As Integer
+   Dim sMapWinName As String
+   Dim lHalt As Integer
+   Dim bWinChanged As Logical
+   Dim nTables As Integer
+   
+   Call dPrint("In-SetGPSWindow")
+   OnError GoTo LABEL1
+   lHalt = Halt
+   Halt = 1
+   startPos = 1
+   endPos = 1
+   iMap = ReadControlValue(200)
+   If iMap = 0 Then
+      Note "Defaulting to the first available map window."
+      iMap = 1
+   End If
+   For i = 1 To iMap Step 1
+      endPos = InStr(startPos, g_sMappable, ";")
+      sMapWinName = Mid$(g_sMappable, startPos, endPos - startPos)
+      startPos = endPos + 1
+   Next
+   nWindows = NumWindows()
+   For i = 1 To nWindows Step 1
+      bMapWin = StringCompare(sMapWinName, WindowInfo(WindowID(i), 1))
+      If bMapWin = 0 Then
+         Set Window WindowID(i)
+            Front
+         If g_trkSelWndID = WindowID(i) Then
+            bWinChanged = 0
+            Call dPrint("g_trkSelWndId(Same):" + Str$(g_trkSelWndID))
+         Else
+            g_trkSelWndID = WindowID(i)
+            bWinChanged = 1
+            Call dPrint("g_trkSelWndId(Changed):" + Str$(g_trkSelWndID))
+         End If
+      End If
+   Next
+   If bWinChanged = 0 Then
+      Call ReInitPoint
+      Call ReInitPLine
+   End If
+   If bWinChanged = 1 Then
+      Call CreateAnimateLayer
+      Add Map Window g_trkSelWndID Layer TempGPS Animate
+      Call ReInitPoint
+      Call ReInitPLine
+   End If
+LABEL0:
+   Halt = lHalt
+   Call dPrint("Out-SetGPSWindow")
+   Exit Sub
+LABEL1:
+   Call dPrint("In-SetGPSMapWinError: " + Err() + "|" + Error$)
+   Resume LABEL0
+End Sub
+
+'--------------------------------------------------------------------
+' ReInitPoint
+'--------------------------------------------------------------------
+
+Sub ReInitPoint()
+   Call dPrint("In-ReInitPoint")
+   OnError GoTo LABEL2
+   Rollback Table TempGPS
+   Fetch First From TempGPS
+   GPSPoint = TempGPS.obj
+   Alter Object GPSPoint
+      Info 2, g_NullSymbol
+   Update TempGPS Set obj = GPSPoint
+      Where ROWID = 1
+LABEL1:
+   Call dPrint("Out-ReInitPoint")
+   Exit Sub
+LABEL0:
+LABEL2:
+   Call dPrint("In-InitPointError" + Err() + Error$())
+   Resume LABEL1
+End Sub
+
+'--------------------------------------------------------------------
+' ReInitPLine
+'--------------------------------------------------------------------
+
+Sub ReInitPLine()
+   Call dPrint("In-ReInitPLine")
+   OnError GoTo LABEL2
+   Rollback Table TempGPS
+   Delete Object From TempGPS
+      Where ROWID = 2
+   Create PLine Into Variable GPSPLine 2
+      ( 0, 0 ) ( 0, 0 )
+      Pen g_tkPen
+   Update TempGPS Set obj = GPSPLine
+      Where ROWID = 2
+LABEL1:
+   Call dPrint("Out-ReInitPLine")
+   Exit Sub
+LABEL0:
+LABEL2:
+   Call dPrint("In-InitPLineError" + Err() + Error$())
+   Resume LABEL1
+End Sub
+
+'--------------------------------------------------------------------
+' CreateAnimateLayer
+'--------------------------------------------------------------------
+
+Sub CreateAnimateLayer()
+   Dim bExists As Logical
+   Dim iRet As Integer
+   Dim lHalt As Integer
+   
+   Call dPrint("In-CreateAnimate")
+   lHalt = Halt
+   Halt = 1
+   If FileExists(ApplicationDirectory$() + "TempGPS.TAB") Then
+      OnError GoTo LABEL1
+      iRet = TableInfo(TempGPS, 8)
+      Close Table TempGPS
+LABEL0:
+      Kill ApplicationDirectory$() + "TempGPS.TAB"
+   End If
+   Create Table "TempGPS"
+      ( ObjectId SmallInt )
+      File ApplicationDirectory$() + "TempGPS.TAB"
+   Rollback Table "TempGPS"
+   Close Table "TempGPS"
+   Open Table ApplicationDirectory$() + "TempGPS.TAB" Hide
+   Create Map
+      For "TempGPS"
+   Set Table "TempGPS" FastEdit On Undo Off
+   Create Point Into Variable GPSPoint
+      ( 0, 0 )
+      Symbol g_NullSymbol
+   Create PLine Into Variable GPSPLine 2
+      ( 0, 0 ) ( 0, 0 )
+      Pen g_tkPen
+   Insert Into "TempGPS" ( ObjectId, obj )
+      Values ( 1, GPSPoint )
+   Insert Into "TempGPS" ( ObjectId, obj )
+      Values ( 2, GPSPLine )
+   Halt = lHalt
+   Call dPrint("Out-CreateAnimate")
+   Exit Sub
+LABEL1:
+   Call dPrint("In OpenTableError: " + Str$(Err()) + " | " + Error$())
+   Resume LABEL0
+End Sub
+
+'--------------------------------------------------------------------
+' Recenter
+'--------------------------------------------------------------------
+
+Sub Recenter()
+   Call dPrint("In-Recenter")
+   OnError GoTo LABEL1
+   If g_trkSelWndID <> 0 Then
+      If g_fLon <> 0 And g_fLat <> 0 Then
+         Set Map Window g_trkSelWndID
+            Center ( g_fLon, g_fLat )
+      End If
+   End If
+   Call dPrint("Out-Recenter")
+   Exit Sub
+LABEL0:
+LABEL1:
+   Call dPrint("RecenterError: " + Error$ + "|" + Str$(Err()))
+   Call ValidateWindow
+   Resume 0
+End Sub
+
+'--------------------------------------------------------------------
+' TestMapExtents
+'--------------------------------------------------------------------
+
+Function TestMapExtents() As Logical
+   Dim minX As Float
+   Dim minY As Float
+   Dim maxX As Float
+   Dim maxY As Float
+   
+   Call dPrint("In- TestMapExtents")
+   OnError GoTo LABEL1
+   minX = MapperInfo(g_trkSelWndID, 5)
+   minY = MapperInfo(g_trkSelWndID, 6)
+   maxX = MapperInfo(g_trkSelWndID, 7)
+   maxY = MapperInfo(g_trkSelWndID, 8)
+   If g_fLat < minY Or g_fLat > maxY Or g_fLon < minX Or g_fLon > maxX Then
+      TestMapExtents = 1
+      Call dPrint("				TestMapExtents-T")
+   Else
+      TestMapExtents = 0
+      Call dPrint("				TestMapExtents-F")
+   End If
+   Call dPrint("Out- TestMapExtents")
+   Exit Function
+LABEL0:
+LABEL1:
+   Call dPrint("TestMapExtentsError:" + Error$ + "|" + Str$(Err()))
+   Call ValidateWindow
+   Exit Function
+End Function
+
+'--------------------------------------------------------------------
+' ValidateWindow
+'--------------------------------------------------------------------
+
+Sub ValidateWindow()
+   Dim nWindows As Integer
+   Dim i As Integer
+   Dim bOK As Logical
+   
+   Call dPrint("In-ValidateWindow")
+   bOK = 0
+   nWindows = NumWindows()
+   If nWindows = 0 Then
+      Note 
+          "There must be at least one mapping window open to use GeoTrack.MBX. Please open a map window before re-activating GPS link."
+      
+      Call GPSOff
+      Exit Sub
+   End If
+   For i = 1 To nWindows Step 1
+      If g_trkSelWndID = WindowInfo(i, 12) Then
+         bOK = 1
+         Exit Sub
+      End If
+   Next
+   If bOK = 0 Then
+      Note "Please choose a tracking window."
+      Call TrackingDLG
+   End If
+   Call dPrint("Out-ValidateWindwow")
+End Sub
+
+'--------------------------------------------------------------------
+' SymGeocode
+'--------------------------------------------------------------------
+
+Sub SymGeocode()
+   Dim colName As String
+   Dim colNum As Integer
+   Dim colType As Integer
+   Dim nRows As Integer
+   Dim gcPoint As Object
+   Dim tableNum As Integer
+   Dim ntables As Integer
+   Dim i As Integer
+   Dim bValidgcTable As Logical
+   
+   OnError GoTo LABEL1
+   ntables = NumTables()
+   bValidgcTable = 0
+   For i = 1 To ntables Step 1
+      If StringCompare(TableInfo(i, 1), g_gcSelTblName) = 0 Then
+         g_gcSelTblIndex = i
+         bValidgcTable = 1
+      End If
+   Next
+   If bValidgcTable = 0 Then
+      Note "Invalid Geocode Table, please check your geocode settings."
+      g_gcSelTblIndex = 0
+      g_gcSelTblName = ""
+      Exit Sub
+   End If
+   If TableInfo(g_gcSelTblName, 5) Then
+      Create Point Into Variable gcPoint
+         ( g_fLon, g_fLat )
+         Symbol g_gcSymbol
+      Insert Into g_gcSelTblName ( obj )
+         Values ( gcPoint )
+      nRows = TableInfo(g_gcSelTblName, 8)
+   Else
+      Note "Geocode table must be a " + Chr$(34) + "Mappable" + Chr$(34) + 
+          " table. Please check your geocoding settings."
+      Exit Sub
+   End If
+   If g_iLat <> 1 Then
+      colNum = g_iLat - 1
+      colName = ColumnInfo(g_gcSelTblName, "COL" + Str$(colNum), 1)
+      colType = ColumnInfo(g_gcSelTblName, "COL" + Str$(colNum), 3)
+      If colType = 1 Then
+         Update g_gcSelTblName Set colName = Format$(g_fLat, 
+             "##.#############")
+            Where RowID = nRows
+      Else
+         If colType = 8 Then
+            Update g_gcSelTblName Set colName = g_fLat
+               Where RowID = nRows
+         Else
+            Note "Incompatible column type definition for " + Chr$(34) + 
+                "Latitude" + Chr$(34)
+         End If
+      End If
+   End If
+   If g_iLon <> 1 Then
+      colNum = g_iLon - 1
+      colName = ColumnInfo(g_gcSelTblName, "COL" + Str$(colNum), 1)
+      colType = ColumnInfo(g_gcSelTblName, "COL" + Str$(colNum), 3)
+      If colType = 1 Then
+         Update g_gcSelTblName Set colName = Format$(g_fLon, 
+             "##.#############")
+            Where RowID = nRows
+      Else
+         If colType = 8 Then
+            Update g_gcSelTblName Set colName = g_fLon
+               Where RowID = nRows
+
+         Else
+            Note "Incompatible column type definition for " + Chr$(34) + 
+                "Longitude" + Chr$(34)
+         End If
+      End If
+   End If
+   If g_iElev <> 1 Then
+      colNum = g_iElev - 1
+      colName = ColumnInfo(g_gcSelTblName, "COL" + Str$(colNum), 1)
+      colType = ColumnInfo(g_gcSelTblName, "COL" + Str$(colNum), 3)
+      If colType = 1 Then
+         Update g_gcSelTblName Set colName = Format$(g_fGeoidElev, "#.###")
+            Where RowID = nRows
+      Else
+         If colType = 8 Then
+            Update g_gcSelTblName Set colName = g_fGeoidElev
+               Where RowID = nRows
+         Else
+            If colType = 3 Then
+               Update g_gcSelTblName Set colName = Fix(g_fGeoidElev)
+                  Where RowID = nRows
+            Else
+               Note "Incompatible column type definition for " + Chr$(34) + 
+                   "Elevation" + Chr$(34)
+            End If
+         End If
+      End If
+   End If
+   If g_iSpeed <> 1 Then
+      colNum = g_iSpeed - 1
+      colName = ColumnInfo(g_gcSelTblName, "COL" + Str$(colNum), 1)
+      colType = ColumnInfo(g_gcSelTblName, "COL" + Str$(colNum), 3)
+      If colType = 1 Then
+         Update g_gcSelTblName Set colName = Format$(g_fSpeed, "#.##")
+            Where RowID = nRows
+      Else
+         If colType = 8 Then
+            Update g_gcSelTblName Set colName = g_fSpeed
+               Where RowID = nRows
+         Else
+            If colType = 3 Then
+               Update g_gcSelTblName Set colName = Fix(g_fSpeed)
+                  Where RowID = nRows
+            Else
+               Note "Incompatible column type definition for " + Chr$(34) + 
+                   "Speed" + Chr$(34)
+            End If
+         End If
+      End If
+   End If
+   If g_iGPSTime <> 1 Then
+      colNum = g_iGPSTime - 1
+      colName = ColumnInfo(g_gcSelTblName, "COL" + Str$(colNum), 1)
+      colType = ColumnInfo(g_gcSelTblName, "COL" + Str$(colNum), 3)
+      If colType = 1 Then
+         Update g_gcSelTblName Set colName = Format$(g_fGPSTime, "#.##")
+            Where RowID = nRows
+      Else
+         If colType = 8 Then
+            Update g_gcSelTblName Set colName = g_fGPSTime
+               Where RowID = nRows
+         Else
+            If colType = 3 Then
+               Update g_gcSelTblName Set colName = Fix(g_fGPSTime)
+                  Where RowID = nRows
+            Else
+               Note "Incompatible Column type Definition for " + Chr$(34) + 
+                   "GPS Time" + Chr$(34)
+            End If
+         End If
+      End If
+   End If
+   If g_iHeading <> 1 Then
+      colNum = g_iHeading - 1
+      colName = ColumnInfo(g_gcSelTblName, "COL" + Str$(colNum), 1)
+      colType = ColumnInfo(g_gcSelTblName, "COL" + Str$(colNum), 3)
+      If colType = 1 Then
+         Update g_gcSelTblName Set colName = Format$(g_fHeading, "#.###")
+            Where RowID = nRows
+      Else
+         If colType = 8 Then
+            Update g_gcSelTblName Set colName = g_fHeading
+               Where RowID = nRows
+         Else
+            If colType = 3 Then
+               Update g_gcSelTblName Set colName = Fix(g_fHeading)
+                  Where RowID = nRows
+            Else
+               Note "Incompatible Column type Definition for " + Chr$(34) + 
+                   "Heading" + Chr$(34)
+            End If
+         End If
+      End If
+   End If
+   If g_iPDOP <> 1 Then
+      colNum = g_iPDOP - 1
+      colName = ColumnInfo(g_gcSelTblName, "COL" + Str$(colNum), 1)
+      colType = ColumnInfo(g_gcSelTblName, "COL" + Str$(colNum), 3)
+      If colType = 1 Then
+         Update g_gcSelTblName Set colName = Format$(g_fPDOP, "#.##")
+            Where RowID = nRows
+      Else
+         If colType = 8 Then
+            Update g_gcSelTblName Set colName = g_fPDOP
+               Where RowID = nRows
+         Else
+            If colType = 3 Then
+               Update g_gcSelTblName Set colName = Fix(g_fPDOP)
+                  Where RowID = nRows
+            Else
+               Note "Incompatible Column type Definition for " + Chr$(34) + 
+                   "PDOP" + Chr$(34)
+            End If
+         End If
+      End If
+   End If
+   Set Window Info Table g_gcSelTblName Rec nRows
+   Exit Sub
+LABEL0:
+LABEL1:
+   If Err = 405 Then
+      Note 
+          "Point Symbol Geocoding Error. Currently selected geocode table may not be available. Please check your geocode settings."
+      
+   End If
+   Exit Sub
+End Sub
+
+'--------------------------------------------------------------------
+' StartPLnGeocode
+'--------------------------------------------------------------------
+
+Sub StartPLnGeocode()
+   Dim nTables As Integer
+   Dim tableNum As Integer
+   Dim i As Integer
+   Dim bValidgcTable As Logical
+   
+   OnError GoTo LABEL1
+   nTables = NumTables()
+   bValidgcTable = 0
+   For i = 1 To nTables Step 1
+      If StringCompare(TableInfo(i, 1), g_gcSelTblName) = 0 Then
+         g_gcSelTblIndex = i
+         bValidgcTable = 1
+      End If
+   Next
+   If bValidgcTable = 0 Then
+      Note "Invalid Geocode Table, please check your geocode settings."
+      Alter Menu Item ID 107
+         Uncheck
+      Alter Button ID 403
+         Uncheck
+      g_bPLnGeocode = 0
+      g_gcSelTblIndex = 0
+      g_gcSelTblName = ""
+      Exit Sub
+   End If
+   If TableInfo(g_gcSelTblName, 5) Then
+      Create PLine Into Variable g_gcPLine 2
+         ( g_fLon, g_fLat ) ( g_fLon, g_fLat )
+         Pen g_gcPen
+   Else
+      Note "Geocode table must be a " + Chr$(34) + "Mappable" + Chr$(34) + 
+          " table. Please check your geocoding settings."
+      Exit Sub
+   End If
+   Exit Sub
+LABEL0:
+LABEL1:
+   Call dPrint("StartPLn Error :" + Str$(Err()) + "|" + Error$())
+End Sub
+
+'--------------------------------------------------------------------
+' UpdatePLnGeocode
+'--------------------------------------------------------------------
+
+Sub UpdatePLnGeocode()
+   Dim p_len As Float
+   
+   If ObjectGeography(g_gcPLine, 1) = 0 Then
+      Alter Object g_gcPLine
+         Node Set Position 1, 1 ( g_fLon, g_fLat )
+      Alter Object g_gcPLine
+         Info 2, g_NullPen
+   Else
+      If ObjectGeography(g_gcPLine, 3) = 0 Then
+         Alter Object g_gcPLine
+            Node Set Position 1, 2 ( g_fLon, g_fLat )
+         Alter Object g_gcPLine
+            Info 2, g_NullPen
+      Else
+         If g_bDist = 1 Then
+            g_sDistUnits = "m"
+            p_len = Distance(ObjectNodeX(g_gcPLine, 1, 1), 
+             ObjectNodeY(g_gcPLine, 1, 1), g_fLon, g_fLat, 
+             g_sDistUnits)
+            If p_len < Val(g_sTolDist) Then
+               Exit Sub
+            End If
+         End If
+      End If
+   End If
+   If ObjectInfo(g_gcPLine, 20) = 15000 Then
+      Call EndPLnGeocode
+      Note "The Maximum number of polyline nodes limit has been reached."
+      Exit Sub
+   End If
+   Alter Object g_gcPLine
+      Node Add ( g_fLon, g_fLat )
+   Alter Object g_gcPLine
+      Info 2, g_gcPen
+   Exit Sub
+   Call dPrint("UpdatePLn Error:" + Str$(Err()) + "|" + Error$())
+End Sub
+
+'--------------------------------------------------------------------
+' EndPLnGeocode
+'--------------------------------------------------------------------
+
+Sub EndPLnGeocode()
+   Dim nRows As Integer
+   Dim tableNum As Integer
+   Dim nTables As Integer
+   Dim i As Integer
+   Dim bValidgcTable As Logical
+   
+   OnError GoTo LABEL1
+   nTables = NumTables()
+   bValidgcTable = 0
+   For i = 1 To nTables Step 1
+      If StringCompare(TableInfo(i, 1), g_gcSelTblName) = 0 Then
+         g_gcSelTblIndex = i
+         bValidgcTable = 1
+      End If
+   Next
+   If bValidgcTable = 0 Then
+      Note "Invalid Geocode Table, please check your geocode settings."
+      Alter Menu Item ID 107
+         Uncheck
+      Alter Button ID 403
+         Uncheck
+      g_bPLnGeocode = 0
+      g_gcSelTblIndex = 0
+      g_gcSelTblName = ""
+      Exit Sub
+   End If
+   Insert Into g_gcSelTblName ( obj )
+      Values ( g_gcPLine )
+   nRows = TableInfo(g_gcSelTblName, 8)
+   Set Window Info Table g_gcSelTblName Rec nRows
+   Exit Sub
+LABEL0:
+LABEL1:
+   Resume Next
+End Sub
+
